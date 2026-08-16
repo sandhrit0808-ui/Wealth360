@@ -57,11 +57,47 @@
 
       <!-- DASHBOARD -->
       <section class="screen" id="screen-dashboard" data-title="Dashboard">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 3</p>
-          <h1 class="placeholder__title">Total corpus, allocation &amp; upcoming maturities will live here.</h1>
-          <p class="placeholder__body">This is an empty shell for now — the dashboard logic and charts get built next.</p>
+
+        <!-- Total corpus -->
+        <div class="corpus-card">
+          <p class="corpus-card__label">Total Financial Corpus</p>
+          <p class="corpus-card__value" id="totalCorpusValue">₹0</p>
+          <p class="corpus-card__note" id="corpusIncompleteNote"></p>
         </div>
+
+        <div class="dashboard-grid">
+
+          <!-- Asset allocation donut -->
+          <div class="card">
+            <h2 class="card__title">Asset Allocation</h2>
+            <div class="allocation" id="allocationEmpty">
+              <svg id="allocationDonut" viewBox="0 0 200 200" class="allocation__svg"></svg>
+              <ul class="allocation__legend" id="allocationLegend"></ul>
+            </div>
+          </div>
+
+          <!-- Corpus by institution -->
+          <div class="card">
+            <div class="card__header-row">
+              <h2 class="card__title">Corpus By Institution</h2>
+              <button class="link-btn" id="btnSortInstitutions">Highest → Lowest</button>
+            </div>
+            <ul class="institution-list" id="institutionList"></ul>
+          </div>
+
+        </div>
+
+        <!-- Quick actions -->
+        <div class="card quick-actions">
+          <h2 class="card__title">Quick Actions</h2>
+          <div class="quick-actions__row">
+            <button class="btn btn--primary" data-navigate="add-asset">Add Asset</button>
+            <button class="btn btn--outline" data-navigate="my-assets">View Assets</button>
+            <button class="btn btn--outline" data-navigate="maturity-calendar">Maturity Calendar</button>
+            <button class="btn btn--outline" data-navigate="corpus-history">Corpus History</button>
+          </div>
+        </div>
+
       </section>
 
       <!-- MY ASSETS -->
