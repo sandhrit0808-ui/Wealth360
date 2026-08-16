@@ -1,153 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wealth360 — Your Personal Financial Operating System</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+W360 Wealth360
+DEMO DATA
+◆Dashboard ▤My Assets ＋Add Asset ◷Maturity Calendar ↗Corpus History ⚙Settings
+Coming in Stage 3
 
-<!-- ============================================================
-     APP SHELL
-     The app has ONE header, ONE side/bottom nav, and SIX "screens".
-     Only one screen is visible at a time — script.js swaps the
-     "active" class based on which nav item was clicked.
-============================================================= -->
+Total corpus, allocation & upcoming maturities will live here.
+This is an empty shell for now — the dashboard logic and charts get built next.
 
-<div class="app">
+Coming in Stage 6
 
-  <!-- ---------- TOP BAR ---------- -->
-  <header class="topbar">
-    <div class="topbar__brand">
-      <span class="topbar__mark">W360</span>
-      <span class="topbar__name">Wealth360</span>
-    </div>
-    <div class="topbar__demo-badge" id="demoBadge">DEMO DATA</div>
-  </header>
+Every asset you add will be listed, searchable and sortable here.
+No assets yet — the Add Asset screen and data layer come first.
 
-  <div class="app__body">
+Coming in Stage 4
 
-    <!-- ---------- DESKTOP SIDE NAV ---------- -->
-    <nav class="sidenav" aria-label="Main navigation">
-      <button class="navitem" data-screen="dashboard">
-        <span class="navitem__icon">◆</span><span>Dashboard</span>
-      </button>
-      <button class="navitem" data-screen="my-assets">
-        <span class="navitem__icon">▤</span><span>My Assets</span>
-      </button>
-      <button class="navitem" data-screen="add-asset">
-        <span class="navitem__icon">＋</span><span>Add Asset</span>
-      </button>
-      <button class="navitem" data-screen="maturity-calendar">
-        <span class="navitem__icon">◷</span><span>Maturity Calendar</span>
-      </button>
-      <button class="navitem" data-screen="corpus-history">
-        <span class="navitem__icon">↗</span><span>Corpus History</span>
-      </button>
-      <button class="navitem" data-screen="settings">
-        <span class="navitem__icon">⚙</span><span>Settings</span>
-      </button>
-    </nav>
+Pick an asset type, and only the fields that matter will appear.
+Savings, Shares, Mutual Funds, FD, RD, EPF, PPF, NPS, Sukanya Samriddhi, LIC, Sovereign Bonds, Gold, Silver, Other.
 
-    <!-- ---------- MAIN CONTENT ---------- -->
-    <main class="screens">
+Coming in Stage 7
 
-      <!-- DASHBOARD -->
-      <section class="screen" id="screen-dashboard" data-title="Dashboard">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 3</p>
-          <h1 class="placeholder__title">Total corpus, allocation &amp; upcoming maturities will live here.</h1>
-          <p class="placeholder__body">This is an empty shell for now — the dashboard logic and charts get built next.</p>
-        </div>
-      </section>
+See what's maturing this month, in 3 months, 6, 12, and later.
+Nothing to show until assets with maturity dates exist.
 
-      <!-- MY ASSETS -->
-      <section class="screen" id="screen-my-assets" data-title="My Assets">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 6</p>
-          <h1 class="placeholder__title">Every asset you add will be listed, searchable and sortable here.</h1>
-          <p class="placeholder__body">No assets yet — the Add Asset screen and data layer come first.</p>
-        </div>
-      </section>
+Coming in Stage 8
 
-      <!-- ADD ASSET -->
-      <section class="screen" id="screen-add-asset" data-title="Add Asset">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 4</p>
-          <h1 class="placeholder__title">Pick an asset type, and only the fields that matter will appear.</h1>
-          <p class="placeholder__body">Savings, Shares, Mutual Funds, FD, RD, EPF, PPF, NPS, Sukanya Samriddhi, LIC, Sovereign Bonds, Gold, Silver, Other.</p>
-        </div>
-      </section>
+Take a snapshot of your corpus on any date and watch it grow.
+The growth line chart will appear here once snapshots exist.
 
-      <!-- MATURITY CALENDAR -->
-      <section class="screen" id="screen-maturity-calendar" data-title="Maturity Calendar">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 7</p>
-          <h1 class="placeholder__title">See what's maturing this month, in 3 months, 6, 12, and later.</h1>
-          <p class="placeholder__body">Nothing to show until assets with maturity dates exist.</p>
-        </div>
-      </section>
+Data layer test — Stage 2
 
-      <!-- CORPUS HISTORY -->
-      <section class="screen" id="screen-corpus-history" data-title="Corpus History">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 8</p>
-          <h1 class="placeholder__title">Take a snapshot of your corpus on any date and watch it grow.</h1>
-          <p class="placeholder__body">The growth line chart will appear here once snapshots exist.</p>
-        </div>
-      </section>
+Load demo data or clear everything stored in this browser.
+The Dashboard and My Assets screens aren't built yet, so use the summary below to confirm data is actually being saved to localStorage.
 
-      <!-- SETTINGS -->
-      <section class="screen" id="screen-settings" data-title="Settings">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Data layer test — Stage 2</p>
-          <h1 class="placeholder__title">Load demo data or clear everything stored in this browser.</h1>
-          <p class="placeholder__body">
-            The Dashboard and My Assets screens aren't built yet, so use the summary below
-            to confirm data is actually being saved to localStorage.
-          </p>
+Load Demo Data Clear All Data
+Wealth360 is a personal financial tracking prototype. Calculations are estimates and should not be treated as financial, investment, tax, or legal advice.
 
-          <div class="settings-actions">
-            <button class="btn btn--primary" id="btnLoadDemo">Load Demo Data</button>
-            <button class="btn btn--danger" id="btnClearData">Clear All Data</button>
-          </div>
-
-          <div class="data-summary" id="dataSummary" aria-live="polite"></div>
-
-          <p class="placeholder__body placeholder__body--footnote">
-            Wealth360 is a personal financial tracking prototype. Calculations are estimates
-            and should not be treated as financial, investment, tax, or legal advice.
-          </p>
-        </div>
-      </section>
-
-    </main>
-  </div>
-
-  <!-- ---------- MOBILE BOTTOM NAV ---------- -->
-  <nav class="bottomnav" aria-label="Mobile navigation">
-    <button class="bottomnav__item" data-screen="dashboard">
-      <span class="bottomnav__icon">◆</span><span class="bottomnav__label">Home</span>
-    </button>
-    <button class="bottomnav__item" data-screen="my-assets">
-      <span class="bottomnav__icon">▤</span><span class="bottomnav__label">Assets</span>
-    </button>
-    <button class="bottomnav__item bottomnav__item--fab" data-screen="add-asset">
-      <span class="bottomnav__icon">＋</span><span class="bottomnav__label">Add</span>
-    </button>
-    <button class="bottomnav__item" data-screen="maturity-calendar">
-      <span class="bottomnav__icon">◷</span><span class="bottomnav__label">Calendar</span>
-    </button>
-    <button class="bottomnav__item" data-screen="settings">
-      <span class="bottomnav__icon">⚙</span><span class="bottomnav__label">Settings</span>
-    </button>
-  </nav>
-
-</div>
-
-<script src="script.js"></script>
-</body>
-</html>
+◆Home ▤Assets ＋Add ◷Calendar ⚙Settings
