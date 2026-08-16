@@ -31,11 +31,29 @@ function initNavigation() {
     // Keep the browser's back/forward buttons and page refresh
     // working sensibly by remembering the current screen.
     window.location.hash = screenName;
+
+    // Screens that show live data re-render every time they're
+    // opened, in case data changed elsewhere (e.g. Settings).
+    if (screenName === 'dashboard') renderDashboard();
   }
+
+  // Make navigation available outside this function too — Quick
+  // Action buttons on the Dashboard use this to jump to other
+  // screens without duplicating the nav logic.
+  window.navigateToScreen = showScreen;
 
   navButtons.forEach(function (btn) {
     btn.addEventListener('click', function () {
       showScreen(btn.dataset.screen);
+    });
+  });
+
+  // Quick Action buttons (and any future button) use
+  // data-navigate="screen-name" instead of data-screen, so they
+  // don't get treated as nav-highlight buttons.
+  document.querySelectorAll('[data-navigate]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      showScreen(btn.dataset.navigate);
     });
   });
 
@@ -356,6 +374,7 @@ function initSettingsScreen() {
     loadBtn.addEventListener('click', function () {
       loadDemoData();
       renderDataSummary();
+      renderDashboard();
     });
   }
 
@@ -365,14 +384,220 @@ function initSettingsScreen() {
       if (!confirmed) return;
       clearAllData();
       renderDataSummary();
+      renderDashboard();
     });
   }
 
   renderDataSummary();
 }
 
+/* ---------- 6b. DASHBOARD CALCULATIONS & RENDERING ----------
+   NOTE: getAssetCurrentValue() below is a BASIC estimate so the
+   Dashboard has real numbers to show. The full deterministic
+   calculation engine (separate function per product, e.g.
+   calculateFDMaturity) is built in Stage 6. For products that
+   don't have a live "current value" yet (FD, RD, Sovereign Bonds),
+   this uses the invested amount as a placeholder and flags it. */
+
+const TYPE_LABELS = {
+  savings: 'Savings Account',
+  shares: 'Shares',
+  mutual_fund: 'Mutual Funds',
+  fd: 'Fixed Deposit',
+  rd: 'Recurring Deposit',
+  epf: 'EPF',
+  ppf: 'PPF',
+  nps: 'NPS',
+  ssy: 'Sukanya Samriddhi',
+  lic: 'LIC',
+  bond: 'Sovereign Bonds',
+  gold: 'Gold',
+  silver: 'Silver',
+  other: 'Other'
+};
+
+const ALLOCATION_COLORS = [
+  '#146356', '#B98A2E', '#4B5C55', '#6E8F87', '#C77B4E',
+  '#3E6E8E', '#8E6E9A', '#A3752B', '#5C7A5A', '#8A5A4E',
+  '#5A7A8A', '#9A8A5A', '#7A5A8A', '#5A8A6E'
+];
+
+function gramsFromWeight(weight, unit) {
+  if (unit === 'kilograms') return weight * 1000;
+  if (unit === 'ounces') return weight * 31.1035;
+  return weight; // grams (default)
+}
+
+// Returns { value, isEstimate }. isEstimate = true means this
+// number is a stand-in (invested amount) until Stage 6's real
+// calculation engine can compute an actual current value.
+function getAssetCurrentValue(asset) {
+  switch (asset.type) {
+    case 'savings': return { value: asset.currentBalance || 0, isEstimate: false };
+    case 'shares': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'mutual_fund': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'epf': return { value: asset.currentValue || asset.currentBalance || 0, isEstimate: false };
+    case 'ppf': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'nps': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'ssy': return { value: asset.currentBalance || 0, isEstimate: false };
+    case 'lic': return { value: asset.currentValue || 0, isEstimate: !asset.currentValue };
+    case 'other': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'fd': return { value: asset.investmentAmount || 0, isEstimate: true };
+    case 'rd': return { value: (asset.monthlyDeposit || 0) * (asset.tenureMonths || 0), isEstimate: true };
+    case 'bond': return { value: asset.investmentAmount || 0, isEstimate: true };
+    case 'gold':
+    case 'silver': {
+      const grams = gramsFromWeight(asset.weight || 0, asset.weightUnit);
+      return { value: grams * (asset.currentPrice || 0), isEstimate: false };
+    }
+    default: return { value: 0, isEstimate: true };
+  }
+}
+
+function renderDashboard() {
+  const totalEl = document.getElementById('totalCorpusValue');
+  if (!totalEl) return; // dashboard markup not present yet
+
+  const assets = loadData(STORAGE_KEYS.assets, []);
+
+  let totalCorpus = 0;
+  let hasEstimates = false;
+  const byType = {};        // type -> total value
+  const byInstitution = {}; // institution -> total value
+
+  assets.forEach(function (asset) {
+    const result = getAssetCurrentValue(asset);
+    totalCorpus += result.value;
+    if (result.isEstimate) hasEstimates = true;
+
+    byType[asset.type] = (byType[asset.type] || 0) + result.value;
+
+    const inst = asset.institution || 'Physical Holding';
+    byInstitution[inst] = (byInstitution[inst] || 0) + result.value;
+  });
+
+  // ---- Total corpus ----
+  totalEl.textContent = formatCurrency(totalCorpus);
+  const noteEl = document.getElementById('corpusIncompleteNote');
+  if (assets.length === 0) {
+    noteEl.textContent = 'No assets yet — load demo data or add your first asset to see your corpus.';
+  } else if (hasEstimates) {
+    noteEl.textContent = 'Corpus may be incomplete: FD, RD and Bond values shown are invested amounts until the maturity calculation engine is built (Stage 6).';
+  } else {
+    noteEl.textContent = '';
+  }
+
+  // ---- Asset allocation donut ----
+  renderAllocationDonut(byType, totalCorpus);
+
+  // ---- Corpus by institution ----
+  renderInstitutionList(byInstitution);
+}
+
+function renderAllocationDonut(byType, totalCorpus) {
+  const svg = document.getElementById('allocationDonut');
+  const legend = document.getElementById('allocationLegend');
+  if (!svg || !legend) return;
+
+  svg.innerHTML = '';
+  legend.innerHTML = '';
+
+  const types = Object.keys(byType).filter(function (t) { return byType[t] > 0; });
+
+  if (types.length === 0 || totalCorpus <= 0) {
+    legend.innerHTML = '<li class="allocation__empty-state">Add assets to see your allocation breakdown.</li>';
+    return;
+  }
+
+  const radius = 80;
+  const strokeWidth = 26;
+  const circumference = 2 * Math.PI * radius;
+  let offsetSoFar = 0;
+
+  types.forEach(function (type, index) {
+    const value = byType[type];
+    const fraction = value / totalCorpus;
+    const dash = fraction * circumference;
+    const color = ALLOCATION_COLORS[index % ALLOCATION_COLORS.length];
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '100');
+    circle.setAttribute('cy', '100');
+    circle.setAttribute('r', radius);
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', color);
+    circle.setAttribute('stroke-width', strokeWidth);
+    circle.setAttribute('stroke-dasharray', dash + ' ' + (circumference - dash));
+    circle.setAttribute('stroke-dashoffset', -offsetSoFar);
+    svg.appendChild(circle);
+
+    offsetSoFar += dash;
+
+    const li = document.createElement('li');
+    li.innerHTML =
+      '<span class="allocation__swatch" style="background:' + color + '"></span>' +
+      '<span class="allocation__legend-name">' + (TYPE_LABELS[type] || type) + '</span>' +
+      '<span class="allocation__legend-value">' + formatCurrency(value) + '</span>';
+    legend.appendChild(li);
+  });
+}
+
+function renderInstitutionList(byInstitution, sortDirection) {
+  const list = document.getElementById('institutionList');
+  if (!list) return;
+
+  const entries = Object.keys(byInstitution).map(function (name) {
+    return { name: name, value: byInstitution[name] };
+  });
+
+  entries.sort(function (a, b) {
+    return sortDirection === 'asc' ? a.value - b.value : b.value - a.value;
+  });
+
+  if (entries.length === 0) {
+    list.innerHTML = '<li class="allocation__empty-state">No institutions yet.</li>';
+    return;
+  }
+
+  const maxValue = Math.max.apply(null, entries.map(function (e) { return e.value; }));
+
+  list.innerHTML = entries.map(function (entry) {
+    const barPercent = maxValue > 0 ? Math.round((entry.value / maxValue) * 100) : 0;
+    return (
+      '<li>' +
+        '<span class="institution-list__name">' + entry.name + '</span>' +
+        '<span class="institution-list__value">' + formatCurrency(entry.value) + '</span>' +
+        '<span class="institution-list__bar-track"><span class="institution-list__bar-fill" style="width:' + barPercent + '%"></span></span>' +
+      '</li>'
+    );
+  }).join('');
+}
+
+function initDashboardSort() {
+  const sortBtn = document.getElementById('btnSortInstitutions');
+  if (!sortBtn) return;
+
+  let currentDirection = 'desc';
+
+  sortBtn.addEventListener('click', function () {
+    currentDirection = currentDirection === 'desc' ? 'asc' : 'desc';
+    sortBtn.textContent = currentDirection === 'desc' ? 'Highest → Lowest' : 'Lowest → Highest';
+
+    const assets = loadData(STORAGE_KEYS.assets, []);
+    const byInstitution = {};
+    assets.forEach(function (asset) {
+      const result = getAssetCurrentValue(asset);
+      const inst = asset.institution || 'Physical Holding';
+      byInstitution[inst] = (byInstitution[inst] || 0) + result.value;
+    });
+
+    renderInstitutionList(byInstitution, currentDirection);
+  });
+}
+
 /* ---------- APP START ---------- */
 document.addEventListener('DOMContentLoaded', function () {
   initNavigation();
   initSettingsScreen();
+  initDashboardSort();
 });
