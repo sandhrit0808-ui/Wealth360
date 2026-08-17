@@ -485,6 +485,161 @@ a:focus-visible {
   color: var(--color-teal);
   border: 1px solid var(--color-teal);
 }
+
+/* ---------- 4c. ADD ASSET SCREEN ---------- */
+
+.add-asset-card {
+  max-width: 640px;
+  margin-bottom: var(--space-5);
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-2);
+}
+
+.type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.type-btn:hover {
+  border-color: var(--color-teal);
+  color: var(--color-ink);
+}
+
+.type-btn.is-selected {
+  border-color: var(--color-teal);
+  background: var(--color-teal);
+  color: #fff;
+}
+
+.type-btn__icon {
+  font-size: 18px;
+  color: var(--color-gold);
+}
+
+.type-btn.is-selected .type-btn__icon {
+  color: #fff;
+}
+
+/* Dynamic form fields */
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-group label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+
+.form-group .hint {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--color-ink-soft);
+  margin-top: 2px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 1px;
+  border-color: var(--color-teal);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-errors {
+  list-style: none;
+  background: #FBEAE8;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  font-size: 13px;
+  color: var(--color-danger);
+}
+
+.form-errors li { margin-bottom: var(--space-1); }
+.form-errors li:last-child { margin-bottom: 0; }
+
+.calc-preview {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-left: 3px solid var(--color-gold);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
+.calc-preview__value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-ink);
+  font-size: 16px;
+  display: block;
+  margin-top: 2px;
+}
+
+.calc-preview__diff-note {
+  margin-top: var(--space-2);
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.success-banner {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: #E9F3EF;
+  border: 1px solid var(--color-teal);
+  border-radius: var(--radius-md);
+}
+
+.success-banner__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
 @media (max-width: 860px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
