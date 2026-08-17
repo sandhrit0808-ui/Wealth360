@@ -595,9 +595,570 @@ function initDashboardSort() {
   });
 }
 
+/* ---------- 7. CALCULATION ENGINE (Stage 5) ----------
+   One deterministic function per financial product — never a
+   single generic formula reused everywhere. Every function returns
+   a plain number (rounded rupees) and never guesses: if it's
+   called, its caller has already checked the required inputs
+   exist. No AI, no randomness — same inputs always give the same
+   answer. */
+
+const COMPOUNDING_PERIODS_PER_YEAR = {
+  'Monthly': 12,
+  'Quarterly': 4,
+  'Half-Yearly': 2,
+  'Yearly': 1
+};
+
+// Fixed Deposit: standard compound interest, compounded at the
+// frequency the user picked.
+function calculateFDMaturity(principal, annualRatePercent, tenureMonths, compoundingFrequency) {
+  const n = COMPOUNDING_PERIODS_PER_YEAR[compoundingFrequency] || 4;
+  const r = annualRatePercent / 100;
+  const t = tenureMonths / 12;
+  const maturity = principal * Math.pow(1 + r / n, n * t);
+  return Math.round(maturity);
+}
+
+// Recurring Deposit: future value of a monthly annuity-due,
+// compounded monthly. Deliberately NOT the FD formula — an RD is a
+// stream of monthly deposits, not a single lump sum.
+function calculateRDMaturity(monthlyDeposit, annualRatePercent, tenureMonths) {
+  const r = annualRatePercent / 100 / 12; // monthly rate
+  if (r === 0) return Math.round(monthlyDeposit * tenureMonths);
+  const maturity = monthlyDeposit * ((Math.pow(1 + r, tenureMonths) - 1) / r) * (1 + r);
+  return Math.round(maturity);
+}
+
+// PPF: existing balance grows annually, PLUS a yearly contribution
+// annuity (deposits assumed made at the start of each PPF year, as
+// is standard practice for getting the full year's interest).
+function calculatePPFMaturity(currentValue, annualContribution, annualRatePercent, yearsRemaining) {
+  const r = annualRatePercent / 100;
+  const fvCurrent = currentValue * Math.pow(1 + r, yearsRemaining);
+  const fvContributions = r === 0
+    ? annualContribution * yearsRemaining
+    : annualContribution * ((Math.pow(1 + r, yearsRemaining) - 1) / r) * (1 + r);
+  return Math.round(fvCurrent + fvContributions);
+}
+
+// Sukanya Samriddhi Yojana: kept as its own function (not reused
+// from PPF) because SSY's contribution pattern and tenure rules
+// differ. This prototype grows the existing balance forward at the
+// given rate to the maturity date — it does not assume new deposits,
+// since the data model doesn't collect an ongoing annual SSY deposit.
+function calculateSSYMaturity(currentBalance, annualRatePercent, yearsRemaining) {
+  const r = annualRatePercent / 100;
+  const maturity = currentBalance * Math.pow(1 + r, yearsRemaining);
+  return Math.round(maturity);
+}
+
+// Sovereign Bonds: simple (non-compounded) annual interest on the
+// principal, paid out over the bond's tenure — the standard
+// structure for instruments like Sovereign Gold Bonds.
+function calculateBondMaturity(investmentAmount, annualRatePercent, tenureYears) {
+  const totalInterest = investmentAmount * (annualRatePercent / 100) * tenureYears;
+  return Math.round(investmentAmount + totalInterest);
+}
+
+// Shared helper: years between two ISO date strings (can be
+// fractional). Used to turn a maturity date into "years remaining"
+// for PPF/SSY/Bond calculations.
+function yearsBetweenDates(fromDateStr, toDateStr) {
+  const from = new Date(fromDateStr);
+  const to = new Date(toDateStr);
+  const msPerYear = 1000 * 60 * 60 * 24 * 365.25;
+  return (to - from) / msPerYear;
+}
+
+/* ---------- 8. ASSET FIELD CONFIGURATIONS (Stage 4) ----------
+   ONE config array per asset type — the form renderer below reads
+   this and builds the right fields automatically. To change what a
+   form asks for, edit the config here; nothing else needs to change. */
+
+const ASSET_TYPES = [
+  { id: 'savings', label: 'Savings Account', icon: '◆' },
+  { id: 'shares', label: 'Shares', icon: '▲' },
+  { id: 'mutual_fund', label: 'Mutual Funds', icon: '◍' },
+  { id: 'fd', label: 'Fixed Deposit', icon: '▣' },
+  { id: 'rd', label: 'Recurring Deposit', icon: '↻' },
+  { id: 'epf', label: 'EPF', icon: '⛁' },
+  { id: 'ppf', label: 'PPF', icon: '⛀' },
+  { id: 'nps', label: 'NPS', icon: '◉' },
+  { id: 'ssy', label: 'Sukanya Samriddhi', icon: '✦' },
+  { id: 'lic', label: 'LIC', icon: '⛨' },
+  { id: 'bond', label: 'Sovereign Bonds', icon: '◈' },
+  { id: 'gold', label: 'Gold - Physical', icon: '●' },
+  { id: 'silver', label: 'Silver - Physical', icon: '○' },
+  { id: 'other', label: 'Other', icon: '＋' }
+];
+
+const WEIGHT_UNIT_OPTIONS = ['grams', 'kilograms', 'ounces'];
+const COMPOUNDING_OPTIONS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
+const FREQUENCY_OPTIONS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
+
+const ASSET_FIELD_CONFIGS = {
+  savings: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'accountNumber', label: 'Account / Reference Number', kind: 'text', required: true },
+    { key: 'currentBalance', label: 'Current Balance (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'date', label: 'As Of Date', kind: 'date', required: true },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  shares: [
+    { key: 'institution', label: 'Institution / Broker', kind: 'institution', required: true },
+    { key: 'company', label: 'Company', kind: 'text', required: true },
+    { key: 'quantity', label: 'Quantity', kind: 'number', required: true, min: 0 },
+    { key: 'purchasePrice', label: 'Purchase Price (₹ per share)', kind: 'number', required: true, min: 0 },
+    { key: 'purchaseDate', label: 'Purchase Date', kind: 'date', required: true },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  mutual_fund: [
+    { key: 'institution', label: 'Institution / AMC', kind: 'institution', required: true },
+    { key: 'fundName', label: 'Fund Name', kind: 'text', required: true },
+    { key: 'investmentAmount', label: 'Investment Amount (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date', kind: 'date', required: true },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  fd: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'investmentAmount', label: 'Investment Amount (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date', kind: 'date', required: true },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'tenureMonths', label: 'Tenure (months)', kind: 'number', required: true, min: 1 },
+    { key: 'compounding', label: 'Compounding Frequency', kind: 'select', required: true, options: COMPOUNDING_OPTIONS },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'date', required: false, hint: 'Leave blank and we\u2019ll estimate it from the investment date and tenure.' },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  rd: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'monthlyDeposit', label: 'Monthly Deposit (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'startDate', label: 'Start Date', kind: 'date', required: true },
+    { key: 'tenureMonths', label: 'Tenure (months)', kind: 'number', required: true, min: 1 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'date', required: false },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  epf: [
+    { key: 'institution', label: 'Institution (EPFO / Trust)', kind: 'institution', required: true },
+    { key: 'currentBalance', label: 'Current Balance (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'contribution', label: 'Monthly Contribution (₹)', kind: 'number', required: false, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a., if known)', kind: 'number', required: false, min: 0, step: 0.01 },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  ppf: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'openingDate', label: 'Opening Date', kind: 'date', required: true },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'contributions', label: 'Annual Contribution (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'date', required: true },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  nps: [
+    { key: 'institution', label: 'Institution / Provider', kind: 'institution', required: true },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'contribution', label: 'Monthly Contribution (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date', kind: 'date', required: true },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  ssy: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'openingDate', label: 'Account Opening Date', kind: 'date', required: true },
+    { key: 'deposits', label: 'Total Deposits So Far (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'currentBalance', label: 'Current Balance (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'date', required: true },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  lic: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'policyName', label: 'Policy Name', kind: 'text', required: true },
+    { key: 'policyNumber', label: 'Policy Number / Reference', kind: 'text', required: true },
+    { key: 'premium', label: 'Premium (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'premiumFrequency', label: 'Premium Frequency', kind: 'select', required: true, options: FREQUENCY_OPTIONS },
+    { key: 'startDate', label: 'Policy Start Date', kind: 'date', required: true },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'date', required: true },
+    { key: 'maturityValueEntered', label: 'Maturity Value (₹, if known)', kind: 'number', required: false, min: 0 },
+    { key: 'currentValue', label: 'Current Value (₹, if known)', kind: 'number', required: false, min: 0 }
+  ],
+  bond: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'bondName', label: 'Bond Name', kind: 'text', required: true },
+    { key: 'investmentAmount', label: 'Investment Amount (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date', kind: 'date', required: true },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'date', required: true },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  gold: [
+    { key: 'weight', label: 'Weight', kind: 'number', required: true, min: 0 },
+    { key: 'weightUnit', label: 'Weight Unit', kind: 'select', required: true, options: WEIGHT_UNIT_OPTIONS, default: 'grams' },
+    { key: 'purchaseDate', label: 'Purchase Date', kind: 'date', required: true },
+    { key: 'purchasePrice', label: 'Purchase Price (₹ per unit)', kind: 'number', required: true, min: 0 },
+    { key: 'currentPrice', label: 'Current Market Price (₹ per unit)', kind: 'number', required: true, min: 0 }
+  ],
+  silver: [
+    { key: 'weight', label: 'Weight', kind: 'number', required: true, min: 0 },
+    { key: 'weightUnit', label: 'Weight Unit', kind: 'select', required: true, options: WEIGHT_UNIT_OPTIONS, default: 'grams' },
+    { key: 'purchaseDate', label: 'Purchase Date', kind: 'date', required: true },
+    { key: 'purchasePrice', label: 'Purchase Price (₹ per unit)', kind: 'number', required: true, min: 0 },
+    { key: 'currentPrice', label: 'Current Market Price (₹ per unit)', kind: 'number', required: true, min: 0 }
+  ],
+  other: [
+    { key: 'institution', label: 'Institution (optional)', kind: 'institution', required: false },
+    { key: 'assetName', label: 'Asset Name', kind: 'text', required: true },
+    { key: 'investmentAmount', label: 'Investment Amount (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date (optional)', kind: 'date', required: false },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a., optional)', kind: 'number', required: false, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date (optional)', kind: 'date', required: false },
+    { key: 'maturityValueEntered', label: 'Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ]
+};
+
+// Which date field marks the "start" for each type — used to check
+// that a maturity date never falls before the asset's start date.
+const START_DATE_FIELD = {
+  fd: 'investmentDate', rd: 'startDate', ppf: 'openingDate',
+  ssy: 'openingDate', lic: 'startDate', bond: 'investmentDate'
+};
+
+/* ---------- 9. ADD ASSET: FORM RENDERING ---------- */
+
+let selectedAssetType = null;
+
+function renderTypeGrid() {
+  const grid = document.getElementById('typeGrid');
+  if (!grid) return;
+
+  grid.innerHTML = ASSET_TYPES.map(function (t) {
+    return (
+      '<button type="button" class="type-btn" data-type="' + t.id + '">' +
+        '<span class="type-btn__icon">' + t.icon + '</span>' +
+        '<span>' + t.label + '</span>' +
+      '</button>'
+    );
+  }).join('');
+
+  grid.querySelectorAll('.type-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      selectAssetType(btn.dataset.type);
+    });
+  });
+}
+
+function refreshInstitutionOptions() {
+  const datalist = document.getElementById('institutionOptions');
+  if (!datalist) return;
+  datalist.innerHTML = getAllInstitutions().map(function (inst) {
+    return '<option value="' + inst.name + '">';
+  }).join('');
+}
+
+function buildFieldHTML(field) {
+  const id = 'field_' + field.key;
+  const requiredMark = field.required ? ' *' : '';
+  const hint = field.hint ? '<span class="hint">' + field.hint + '</span>' : '';
+
+  let inputHTML = '';
+
+  if (field.kind === 'institution') {
+    inputHTML = '<input type="text" id="' + id + '" list="institutionOptions" autocomplete="off">';
+  } else if (field.kind === 'text') {
+    inputHTML = '<input type="text" id="' + id + '">';
+  } else if (field.kind === 'number') {
+    const min = (field.min !== undefined) ? ' min="' + field.min + '"' : '';
+    const step = field.step ? ' step="' + field.step + '"' : ' step="any"';
+    inputHTML = '<input type="number" id="' + id + '"' + min + step + '>';
+  } else if (field.kind === 'date') {
+    inputHTML = '<input type="date" id="' + id + '">';
+  } else if (field.kind === 'select') {
+    const options = field.options.map(function (opt) {
+      const selectedAttr = (field.default === opt) ? ' selected' : '';
+      return '<option value="' + opt + '"' + selectedAttr + '>' + opt + '</option>';
+    }).join('');
+    inputHTML = '<select id="' + id + '">' + options + '</select>';
+  } else if (field.kind === 'textarea') {
+    inputHTML = '<textarea id="' + id + '"></textarea>';
+  }
+
+  return (
+    '<div class="form-group">' +
+      '<label for="' + id + '">' + field.label + requiredMark + '</label>' +
+      inputHTML + hint +
+    '</div>'
+  );
+}
+
+function selectAssetType(typeId) {
+  selectedAssetType = typeId;
+
+  document.querySelectorAll('.type-btn').forEach(function (btn) {
+    btn.classList.toggle('is-selected', btn.dataset.type === typeId);
+  });
+
+  const typeMeta = ASSET_TYPES.find(function (t) { return t.id === typeId; });
+  document.getElementById('formTitle').textContent = '2. Enter ' + typeMeta.label + ' Details';
+
+  const fields = ASSET_FIELD_CONFIGS[typeId];
+  document.getElementById('dynamicFields').innerHTML = fields.map(buildFieldHTML).join('');
+
+  document.getElementById('formCard').style.display = 'block';
+  document.getElementById('formErrors').style.display = 'none';
+  document.getElementById('successBanner').style.display = 'none';
+  document.getElementById('assetForm').style.display = 'block';
+
+  refreshInstitutionOptions();
+
+  const previewBox = document.getElementById('calcPreview');
+  if (CALC_PREVIEW_FNS[typeId]) {
+    previewBox.style.display = 'block';
+    document.getElementById('dynamicFields').addEventListener('input', function () {
+      updateCalcPreview(typeId);
+    });
+    updateCalcPreview(typeId);
+  } else {
+    previewBox.style.display = 'none';
+  }
+}
+
+/* ---------- 10. ADD ASSET: LIVE MATURITY PREVIEW ---------- */
+
+function getFieldValue(key) {
+  const el = document.getElementById('field_' + key);
+  return el ? el.value : '';
+}
+
+function computeFDPreview() {
+  const investmentAmount = Number(getFieldValue('investmentAmount'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const tenureMonths = Number(getFieldValue('tenureMonths'));
+  const compounding = getFieldValue('compounding');
+
+  if (!investmentAmount || !interestRate || !tenureMonths || !compounding) {
+    return { value: null, message: 'Add investment amount, interest rate, tenure and compounding frequency to calculate estimated maturity value.' };
+  }
+  return { value: calculateFDMaturity(investmentAmount, interestRate, tenureMonths, compounding), message: null };
+}
+
+function computeRDPreview() {
+  const monthlyDeposit = Number(getFieldValue('monthlyDeposit'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const tenureMonths = Number(getFieldValue('tenureMonths'));
+
+  if (!monthlyDeposit || !interestRate || !tenureMonths) {
+    return { value: null, message: 'Add monthly deposit, interest rate and tenure to calculate estimated maturity value.' };
+  }
+  return { value: calculateRDMaturity(monthlyDeposit, interestRate, tenureMonths), message: null };
+}
+
+function computePPFPreview() {
+  const currentValue = Number(getFieldValue('currentValue'));
+  const contributions = Number(getFieldValue('contributions')) || 0;
+  const interestRate = Number(getFieldValue('interestRate'));
+  const maturityDate = getFieldValue('maturityDate');
+
+  if (!currentValue || !interestRate || !maturityDate) {
+    return { value: null, message: 'Add current value, interest rate and maturity date to calculate estimated maturity value.' };
+  }
+  const yearsRemaining = yearsBetweenDates(new Date().toISOString().slice(0, 10), maturityDate);
+  if (yearsRemaining <= 0) {
+    return { value: null, message: 'Maturity date should be in the future to estimate a maturity value.' };
+  }
+  return { value: calculatePPFMaturity(currentValue, contributions, interestRate, yearsRemaining), message: null };
+}
+
+function computeSSYPreview() {
+  const currentBalance = Number(getFieldValue('currentBalance'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const maturityDate = getFieldValue('maturityDate');
+
+  if (!currentBalance || !interestRate || !maturityDate) {
+    return { value: null, message: 'Add current balance, interest rate and maturity date to calculate estimated maturity value.' };
+  }
+  const yearsRemaining = yearsBetweenDates(new Date().toISOString().slice(0, 10), maturityDate);
+  if (yearsRemaining <= 0) {
+    return { value: null, message: 'Maturity date should be in the future to estimate a maturity value.' };
+  }
+  return { value: calculateSSYMaturity(currentBalance, interestRate, yearsRemaining), message: null };
+}
+
+function computeBondPreview() {
+  const investmentAmount = Number(getFieldValue('investmentAmount'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const investmentDate = getFieldValue('investmentDate');
+  const maturityDate = getFieldValue('maturityDate');
+
+  if (!investmentAmount || !interestRate || !investmentDate || !maturityDate) {
+    return { value: null, message: 'Add investment amount, interest rate, investment date and maturity date to calculate estimated maturity value.' };
+  }
+  const tenureYears = yearsBetweenDates(investmentDate, maturityDate);
+  if (tenureYears <= 0) {
+    return { value: null, message: 'Maturity date should be after the investment date to estimate a maturity value.' };
+  }
+  return { value: calculateBondMaturity(investmentAmount, interestRate, tenureYears), message: null };
+}
+
+const CALC_PREVIEW_FNS = {
+  fd: computeFDPreview,
+  rd: computeRDPreview,
+  ppf: computePPFPreview,
+  ssy: computeSSYPreview,
+  bond: computeBondPreview
+};
+
+function updateCalcPreview(typeId) {
+  const box = document.getElementById('calcPreview');
+  const fn = CALC_PREVIEW_FNS[typeId];
+  if (!box || !fn) return;
+
+  const result = fn();
+
+  if (result.value === null) {
+    box.innerHTML = result.message;
+    return;
+  }
+
+  let html = 'Estimated Maturity Value<span class="calc-preview__value">' + formatCurrency(result.value) + '</span>';
+
+  const enteredRaw = getFieldValue('maturityValueEntered');
+  if (enteredRaw) {
+    const entered = Number(enteredRaw);
+    const diffFraction = Math.abs(entered - result.value) / result.value;
+    if (diffFraction > 0.01) {
+      html += '<div class="calc-preview__diff-note">Calculated maturity value differs from your entered value.</div>';
+    }
+  }
+
+  box.innerHTML = html;
+}
+
+/* ---------- 11. ADD ASSET: VALIDATION & SAVE ---------- */
+
+function validateAssetForm(typeId, fields) {
+  const errors = [];
+  const values = {};
+
+  fields.forEach(function (field) {
+    const raw = getFieldValue(field.key);
+    values[field.key] = raw;
+
+    if (field.required && !raw) {
+      errors.push('Please enter ' + field.label.replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\*$/, '') + '.');
+      return;
+    }
+
+    if (field.kind === 'number' && raw !== '') {
+      const num = Number(raw);
+      if (field.min !== undefined && num < field.min) {
+        errors.push(field.label.replace(/\s*\(.*?\)\s*/g, '') + ' cannot be negative.');
+      }
+    }
+  });
+
+  // Maturity date should not be before the asset's start date.
+  const startKey = START_DATE_FIELD[typeId];
+  if (startKey && values[startKey] && values.maturityDate) {
+    if (new Date(values.maturityDate) < new Date(values[startKey])) {
+      errors.push('Maturity Date should not be before the investment/start date.');
+    }
+  }
+
+  return { errors: errors, values: values };
+}
+
+function saveAssetForm(event) {
+  event.preventDefault();
+  if (!selectedAssetType) return;
+
+  const fields = ASSET_FIELD_CONFIGS[selectedAssetType];
+  const { errors, values } = validateAssetForm(selectedAssetType, fields);
+
+  const errorBox = document.getElementById('formErrors');
+  if (errors.length > 0) {
+    errorBox.innerHTML = errors.map(function (e) { return '<li>' + e + '</li>'; }).join('');
+    errorBox.style.display = 'block';
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  errorBox.style.display = 'none';
+
+  // Build the asset object: numbers parsed as numbers, blanks as
+  // null (never guessed), text kept as-is.
+  const asset = { id: generateId(), type: selectedAssetType, createdAt: new Date().toISOString() };
+  fields.forEach(function (field) {
+    const raw = values[field.key];
+    if (field.kind === 'number') {
+      asset[field.key] = raw === '' ? null : Number(raw);
+    } else {
+      asset[field.key] = raw === '' ? null : raw;
+    }
+  });
+
+  // If a live-calculated maturity value exists for this type, store
+  // it alongside the user's entered value — never overwrite one
+  // with the other.
+  if (CALC_PREVIEW_FNS[selectedAssetType]) {
+    const calc = CALC_PREVIEW_FNS[selectedAssetType]();
+    asset.maturityValueCalculated = calc.value;
+  }
+
+  // A typed institution that isn't in the master list yet gets
+  // saved as a custom institution for next time.
+  if (asset.institution) {
+    const exists = getAllInstitutions().some(function (inst) {
+      return inst.name.toLowerCase() === asset.institution.toLowerCase();
+    });
+    if (!exists) addCustomInstitution(asset.institution);
+  }
+
+  updateData(STORAGE_KEYS.assets, [], function (list) {
+    list.push(asset);
+    return list;
+  });
+
+  const typeMeta = ASSET_TYPES.find(function (t) { return t.id === selectedAssetType; });
+  document.getElementById('successAssetLabel').textContent = typeMeta.label;
+  document.getElementById('assetForm').style.display = 'none';
+  document.getElementById('successBanner').style.display = 'block';
+
+  refreshInstitutionOptions();
+  renderDashboard();
+}
+
+function resetAddAssetScreen() {
+  selectedAssetType = null;
+  document.querySelectorAll('.type-btn').forEach(function (btn) {
+    btn.classList.remove('is-selected');
+  });
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('assetForm').style.display = 'block';
+  document.getElementById('successBanner').style.display = 'none';
+  document.getElementById('formErrors').style.display = 'none';
+}
+
+function initAddAssetScreen() {
+  renderTypeGrid();
+  refreshInstitutionOptions();
+
+  const form = document.getElementById('assetForm');
+  if (form) form.addEventListener('submit', saveAssetForm);
+
+  const cancelBtn = document.getElementById('btnCancelAdd');
+  if (cancelBtn) cancelBtn.addEventListener('click', resetAddAssetScreen);
+
+  const addAnotherBtn = document.getElementById('btnAddAnother');
+  if (addAnotherBtn) addAnotherBtn.addEventListener('click', resetAddAssetScreen);
+}
+
 /* ---------- APP START ---------- */
 document.addEventListener('DOMContentLoaded', function () {
   initNavigation();
   initSettingsScreen();
   initDashboardSort();
+  initAddAssetScreen();
 });
