@@ -102,17 +102,35 @@
 
       <!-- MY ASSETS -->
       <section class="screen" id="screen-my-assets" data-title="My Assets">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 6</p>
-          <h1 class="placeholder__title">Every asset you add will be listed, searchable and sortable here.</h1>
-          <p class="placeholder__body">No assets yet — the Add Asset screen and data layer come first.</p>
+
+        <div class="card assets-toolbar">
+          <input type="text" id="assetSearch" class="assets-toolbar__search" placeholder="Search by institution, name, policy number...">
+          <select id="assetTypeFilter" class="assets-toolbar__select"></select>
+          <select id="assetSort" class="assets-toolbar__select">
+            <option value="value-desc">Current Value: High to Low</option>
+            <option value="value-asc">Current Value: Low to High</option>
+            <option value="maturity-asc">Maturity Date: Soonest First</option>
+            <option value="institution-asc">Institution: A-Z</option>
+          </select>
         </div>
+
+        <div id="assetsListWrap"></div>
+
+        <div class="empty-state" id="assetsEmptyState" style="display:none;">
+          <p>No assets match yet.</p>
+          <button class="btn btn--primary" data-navigate="add-asset">Add Your First Asset</button>
+        </div>
+
       </section>
 
       <!-- ADD ASSET -->
       <section class="screen" id="screen-add-asset" data-title="Add Asset">
 
-        <div class="card add-asset-card">
+        <p class="edit-mode-note" id="editModeNote" style="display:none;">
+          Editing an existing asset — the asset type can't be changed here. Delete and re-add if you need a different type.
+        </p>
+
+        <div class="card add-asset-card" id="typePickerCard">
           <h2 class="card__title">1. Choose Asset Type</h2>
           <div class="type-grid" id="typeGrid"></div>
         </div>
@@ -128,7 +146,7 @@
             <div class="calc-preview" id="calcPreview" style="display:none;"></div>
 
             <div class="form-actions">
-              <button type="submit" class="btn btn--primary">Save Asset</button>
+              <button type="submit" class="btn btn--primary" id="btnSubmitAsset">Save Asset</button>
               <button type="button" class="btn btn--outline" id="btnCancelAdd">Cancel</button>
             </div>
           </form>
@@ -147,20 +165,56 @@
 
       <!-- MATURITY CALENDAR -->
       <section class="screen" id="screen-maturity-calendar" data-title="Maturity Calendar">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 7</p>
-          <h1 class="placeholder__title">See what's maturing this month, in 3 months, 6, 12, and later.</h1>
-          <p class="placeholder__body">Nothing to show until assets with maturity dates exist.</p>
+        <div id="maturityCalendarWrap"></div>
+        <div class="empty-state" id="maturityEmptyState" style="display:none;">
+          <p>No assets with a maturity date yet.</p>
+          <button class="btn btn--primary" data-navigate="add-asset">Add a Fixed Deposit, RD, PPF, SSY, LIC or Bond</button>
         </div>
       </section>
 
       <!-- CORPUS HISTORY -->
       <section class="screen" id="screen-corpus-history" data-title="Corpus History">
-        <div class="placeholder">
-          <p class="placeholder__eyebrow">Coming in Stage 8</p>
-          <h1 class="placeholder__title">Take a snapshot of your corpus on any date and watch it grow.</h1>
-          <p class="placeholder__body">The growth line chart will appear here once snapshots exist.</p>
+
+        <div class="card add-asset-card">
+          <h2 class="card__title">Take a Snapshot</h2>
+          <p class="hint">Records today's total corpus (from your current assets) against a date of your choice.</p>
+
+          <div class="quick-dates" id="quickDates"></div>
+
+          <div class="form-group">
+            <label for="snapshotDate">Snapshot Date</label>
+            <input type="date" id="snapshotDate">
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn--primary" id="btnTakeSnapshot">Take Snapshot</button>
+          </div>
+
+          <p class="snapshot-confirm" id="snapshotConfirm" style="display:none;"></p>
         </div>
+
+        <div class="card add-asset-card">
+          <h2 class="card__title">Total Corpus on Selected Date</h2>
+          <div class="form-group">
+            <label for="lookupDate">Choose a Date</label>
+            <input type="date" id="lookupDate">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--outline" id="btnLookupDate">Show Total</button>
+          </div>
+          <p class="snapshot-lookup-result" id="lookupResult"></p>
+        </div>
+
+        <div class="card">
+          <h2 class="card__title">Corpus Growth Over Time</h2>
+          <div id="growthChartWrap"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="card__title">Snapshots</h2>
+          <ul class="snapshot-list" id="snapshotList"></ul>
+        </div>
+
       </section>
 
       <!-- SETTINGS -->
@@ -208,6 +262,19 @@
       <span class="bottomnav__icon">⚙</span><span class="bottomnav__label">Settings</span>
     </button>
   </nav>
+
+  <!-- ---------- ASSET DETAIL MODAL ---------- -->
+  <!-- Shared by My Assets (Stage 6) and Maturity Calendar (Stage 7) -->
+  <div class="modal-overlay" id="assetDetailModal" style="display:none;">
+    <div class="modal">
+      <button class="modal__close" id="btnCloseModal" aria-label="Close">×</button>
+      <div id="modalContent"></div>
+      <div class="modal__actions">
+        <button class="btn btn--primary" id="btnEditAsset">Edit</button>
+        <button class="btn btn--danger" id="btnDeleteAsset">Delete</button>
+      </div>
+    </div>
+  </div>
 
 </div>
 
