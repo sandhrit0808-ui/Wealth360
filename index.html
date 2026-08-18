@@ -234,6 +234,10 @@
 
           <div class="data-summary" id="dataSummary" aria-live="polite"></div>
 
+          <p class="privacy-note">
+            No KYC, no PAN, no phone number — and nothing here is ever linked to your bank or UPI accounts.
+          </p>
+
           <p class="placeholder__body placeholder__body--footnote">
             Wealth360 is a personal financial tracking prototype. Calculations are estimates
             and should not be treated as financial, investment, tax, or legal advice.
@@ -272,6 +276,23 @@
       <div class="modal__actions">
         <button class="btn btn--primary" id="btnEditAsset">Edit</button>
         <button class="btn btn--danger" id="btnDeleteAsset">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- TRUST NOTICE (first-time only) ---------- -->
+  <!-- Shown once, ever, per device — never nags on repeat visits.
+       The same message lives permanently (quietly) in Settings too. -->
+  <div class="modal-overlay" id="trustNoticeModal" style="display:none;">
+    <div class="modal">
+      <h2 class="modal-detail__headline">Your Privacy, By Design</h2>
+      <p class="trust-notice__body">
+        We don't ask for KYC, PAN, or your phone number — and we never link to your bank or UPI accounts.
+        Everything you enter stays under your control, which keeps your financial information out of reach
+        of the fraud and scams that come with linked accounts.
+      </p>
+      <div class="modal__actions">
+        <button class="btn btn--primary" id="btnDismissTrustNotice">Got it</button>
       </div>
     </div>
   </div>
