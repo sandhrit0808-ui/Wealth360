@@ -35,6 +35,9 @@ function initNavigation() {
     // Screens that show live data re-render every time they're
     // opened, in case data changed elsewhere (e.g. Settings).
     if (screenName === 'dashboard') renderDashboard();
+    if (screenName === 'my-assets') renderAssetsList();
+    if (screenName === 'maturity-calendar') renderMaturityCalendar();
+    if (screenName === 'corpus-history') renderCorpusHistory();
   }
 
   // Make navigation available outside this function too — Quick
@@ -917,9 +920,6 @@ function selectAssetType(typeId) {
   const previewBox = document.getElementById('calcPreview');
   if (CALC_PREVIEW_FNS[typeId]) {
     previewBox.style.display = 'block';
-    document.getElementById('dynamicFields').addEventListener('input', function () {
-      updateCalcPreview(typeId);
-    });
     updateCalcPreview(typeId);
   } else {
     previewBox.style.display = 'none';
@@ -1089,7 +1089,11 @@ function saveAssetForm(event) {
 
   // Build the asset object: numbers parsed as numbers, blanks as
   // null (never guessed), text kept as-is.
-  const asset = { id: generateId(), type: selectedAssetType, createdAt: new Date().toISOString() };
+  const isEditing = !!editingAssetId;
+  const asset = isEditing
+    ? { id: editingAssetId, type: selectedAssetType }
+    : { id: generateId(), type: selectedAssetType, createdAt: new Date().toISOString() };
+
   fields.forEach(function (field) {
     const raw = values[field.key];
     if (field.kind === 'number') {
@@ -1098,6 +1102,8 @@ function saveAssetForm(event) {
       asset[field.key] = raw === '' ? null : raw;
     }
   });
+
+  if (isEditing) asset.updatedAt = new Date().toISOString();
 
   // If a live-calculated maturity value exists for this type, store
   // it alongside the user's entered value — never overwrite one
@@ -1117,28 +1123,48 @@ function saveAssetForm(event) {
   }
 
   updateData(STORAGE_KEYS.assets, [], function (list) {
+    if (isEditing) {
+      const original = list.find(function (a) { return a.id === editingAssetId; });
+      asset.createdAt = original ? original.createdAt : new Date().toISOString();
+      return list.map(function (a) { return a.id === editingAssetId ? asset : a; });
+    }
     list.push(asset);
     return list;
   });
 
   const typeMeta = ASSET_TYPES.find(function (t) { return t.id === selectedAssetType; });
-  document.getElementById('successAssetLabel').textContent = typeMeta.label;
+  document.getElementById('successAssetLabel').textContent = typeMeta.label + (isEditing ? ' (updated)' : '');
   document.getElementById('assetForm').style.display = 'none';
   document.getElementById('successBanner').style.display = 'block';
 
+  editingAssetId = null;
+  document.getElementById('editModeNote').style.display = 'none';
+
   refreshInstitutionOptions();
   renderDashboard();
+  renderAssetsList();
+  renderMaturityCalendar();
 }
 
 function resetAddAssetScreen() {
+  const wasEditing = !!editingAssetId;
+
   selectedAssetType = null;
+  editingAssetId = null;
   document.querySelectorAll('.type-btn').forEach(function (btn) {
     btn.classList.remove('is-selected');
   });
+  document.getElementById('typePickerCard').style.display = 'block';
+  document.getElementById('editModeNote').style.display = 'none';
   document.getElementById('formCard').style.display = 'none';
   document.getElementById('assetForm').style.display = 'block';
   document.getElementById('successBanner').style.display = 'none';
   document.getElementById('formErrors').style.display = 'none';
+  document.getElementById('btnSubmitAsset').textContent = 'Save Asset';
+
+  // Cancelling an edit goes back to the list; cancelling a fresh
+  // add just clears the form so you can pick a different type.
+  if (wasEditing) navigateToScreen('my-assets');
 }
 
 function initAddAssetScreen() {
@@ -1153,6 +1179,556 @@ function initAddAssetScreen() {
 
   const addAnotherBtn = document.getElementById('btnAddAnother');
   if (addAnotherBtn) addAnotherBtn.addEventListener('click', resetAddAssetScreen);
+
+  // ONE delegated listener for the whole app's lifetime, instead of
+  // re-attaching a new one every time a type is picked — it always
+  // reads the current selectedAssetType, so nothing stacks up.
+  const dynamicFields = document.getElementById('dynamicFields');
+  if (dynamicFields) {
+    dynamicFields.addEventListener('input', function () {
+      if (selectedAssetType && CALC_PREVIEW_FNS[selectedAssetType]) {
+        updateCalcPreview(selectedAssetType);
+      }
+    });
+  }
+}
+
+/* ---------- 12. SHARED ASSET DISPLAY HELPERS ----------
+   Used by both My Assets (Stage 6) and Maturity Calendar (Stage 7)
+   so the two screens describe an asset the same way. */
+
+function getAssetDisplayName(asset) {
+  return asset.company || asset.fundName || asset.policyName ||
+    asset.bondName || asset.assetName || (TYPE_LABELS[asset.type] || asset.type);
+}
+
+function getAssetInvestedAmount(asset) {
+  switch (asset.type) {
+    case 'shares': return (asset.quantity || 0) * (asset.purchasePrice || 0);
+    case 'mutual_fund': return asset.investmentAmount;
+    case 'fd': return asset.investmentAmount;
+    case 'rd': return (asset.monthlyDeposit || 0) * (asset.tenureMonths || 0);
+    case 'ssy': return asset.deposits;
+    case 'bond': return asset.investmentAmount;
+    case 'other': return asset.investmentAmount;
+    case 'gold':
+    case 'silver': {
+      const grams = gramsFromWeight(asset.weight || 0, asset.weightUnit);
+      return grams * (asset.purchasePrice || 0);
+    }
+    default: return null;
+  }
+}
+
+// Prefers the deterministically-calculated maturity value (stored
+// at save time); falls back to what the user typed in themselves.
+// Never invents a number if neither exists.
+function getAssetMaturityValue(asset) {
+  if (asset.maturityValueCalculated !== undefined && asset.maturityValueCalculated !== null) {
+    return asset.maturityValueCalculated;
+  }
+  if (asset.maturityValueEntered !== undefined && asset.maturityValueEntered !== null) {
+    return asset.maturityValueEntered;
+  }
+  return null;
+}
+
+function searchableText(asset) {
+  return [
+    asset.institution, asset.company, asset.fundName, asset.policyName,
+    asset.policyNumber, asset.bondName, asset.assetName, asset.accountNumber, asset.notes
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+/* ---------- 13. MY ASSETS: LIST, SEARCH, FILTER, SORT (Stage 6) ---------- */
+
+function populateAssetTypeFilter() {
+  const select = document.getElementById('assetTypeFilter');
+  if (!select) return;
+  select.innerHTML = '<option value="all">All Asset Types</option>' +
+    ASSET_TYPES.map(function (t) { return '<option value="' + t.id + '">' + t.label + '</option>'; }).join('');
+}
+
+function renderAssetsList() {
+  const wrap = document.getElementById('assetsListWrap');
+  const emptyState = document.getElementById('assetsEmptyState');
+  if (!wrap) return;
+
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const searchTerm = (document.getElementById('assetSearch').value || '').toLowerCase();
+  const typeFilter = document.getElementById('assetTypeFilter').value;
+  const sortMode = document.getElementById('assetSort').value;
+
+  let filtered = assets.filter(function (asset) {
+    const matchesType = typeFilter === 'all' || asset.type === typeFilter;
+    const matchesSearch = !searchTerm || searchableText(asset).includes(searchTerm);
+    return matchesType && matchesSearch;
+  });
+
+  filtered.forEach(function (asset) {
+    asset._currentValue = getAssetCurrentValue(asset).value;
+  });
+
+  if (sortMode === 'value-desc') filtered.sort(function (a, b) { return b._currentValue - a._currentValue; });
+  else if (sortMode === 'value-asc') filtered.sort(function (a, b) { return a._currentValue - b._currentValue; });
+  else if (sortMode === 'institution-asc') filtered.sort(function (a, b) { return (a.institution || '').localeCompare(b.institution || ''); });
+  else if (sortMode === 'maturity-asc') {
+    filtered.sort(function (a, b) {
+      if (!a.maturityDate) return 1;
+      if (!b.maturityDate) return -1;
+      return new Date(a.maturityDate) - new Date(b.maturityDate);
+    });
+  }
+
+  if (filtered.length === 0) {
+    wrap.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  wrap.innerHTML = filtered.map(function (asset) {
+    const invested = getAssetInvestedAmount(asset);
+    const maturityValue = getAssetMaturityValue(asset);
+    return (
+      '<div class="asset-row" data-asset-id="' + asset.id + '">' +
+        '<div>' +
+          '<div class="asset-row__type">' + (TYPE_LABELS[asset.type] || asset.type) + ' — ' + getAssetDisplayName(asset) + '</div>' +
+          '<div class="asset-row__institution">' + (asset.institution || 'Physical Holding') + '</div>' +
+        '</div>' +
+        '<div><span class="asset-row__col-label">Invested</span><span class="asset-row__value">' + (invested !== null && invested !== undefined ? formatCurrency(invested) : '—') + '</span></div>' +
+        '<div><span class="asset-row__col-label">Current Value</span><span class="asset-row__value">' + formatCurrency(asset._currentValue) + '</span></div>' +
+        '<div><span class="asset-row__col-label">Maturity Date</span><span class="asset-row__value">' + (asset.maturityDate || '—') + '</span></div>' +
+        '<div><span class="asset-row__col-label">Maturity Value</span><span class="asset-row__value">' + (maturityValue !== null ? formatCurrency(maturityValue) : '—') + '</span></div>' +
+      '</div>'
+    );
+  }).join('');
+
+  wrap.querySelectorAll('.asset-row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      openAssetDetail(row.dataset.assetId);
+    });
+  });
+}
+
+function initMyAssetsScreen() {
+  populateAssetTypeFilter();
+
+  const searchInput = document.getElementById('assetSearch');
+  const typeFilter = document.getElementById('assetTypeFilter');
+  const sortSelect = document.getElementById('assetSort');
+
+  if (searchInput) searchInput.addEventListener('input', renderAssetsList);
+  if (typeFilter) typeFilter.addEventListener('change', renderAssetsList);
+  if (sortSelect) sortSelect.addEventListener('change', renderAssetsList);
+}
+
+/* ---------- 14. ASSET DETAIL MODAL (view / edit / delete) ---------- */
+
+let activeModalAssetId = null;
+
+function buildAssetDetailHTML(asset) {
+  const fields = ASSET_FIELD_CONFIGS[asset.type];
+  const rows = [];
+
+  rows.push('<div class="modal-detail__row"><span class="modal-detail__label">Asset Type</span><span class="modal-detail__value">' + (TYPE_LABELS[asset.type] || asset.type) + '</span></div>');
+  rows.push('<div class="modal-detail__row"><span class="modal-detail__label">Current Value</span><span class="modal-detail__value">' + formatCurrency(getAssetCurrentValue(asset).value) + '</span></div>');
+
+  const maturityValue = getAssetMaturityValue(asset);
+  if (maturityValue !== null) {
+    rows.push('<div class="modal-detail__row"><span class="modal-detail__label">Maturity Value</span><span class="modal-detail__value">' + formatCurrency(maturityValue) + '</span></div>');
+  }
+
+  fields.forEach(function (field) {
+    if (field.key === 'maturityValueEntered' || field.key === 'currentValue') return; // already summarized above
+    const value = asset[field.key];
+    if (value === null || value === undefined || value === '') return;
+    const label = field.label.replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\*$/, '');
+    rows.push('<div class="modal-detail__row"><span class="modal-detail__label">' + label + '</span><span class="modal-detail__value">' + value + '</span></div>');
+  });
+
+  return (
+    '<h2 class="modal-detail__headline">' + getAssetDisplayName(asset) + '</h2>' +
+    rows.join('')
+  );
+}
+
+function openAssetDetail(assetId) {
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const asset = assets.find(function (a) { return a.id === assetId; });
+  if (!asset) return;
+
+  activeModalAssetId = assetId;
+  document.getElementById('modalContent').innerHTML = buildAssetDetailHTML(asset);
+  document.getElementById('assetDetailModal').style.display = 'flex';
+}
+
+function closeAssetDetail() {
+  activeModalAssetId = null;
+  document.getElementById('assetDetailModal').style.display = 'none';
+}
+
+function deleteAssetById(assetId) {
+  updateData(STORAGE_KEYS.assets, [], function (list) {
+    return list.filter(function (a) { return a.id !== assetId; });
+  });
+}
+
+function initAssetDetailModal() {
+  const overlay = document.getElementById('assetDetailModal');
+  const closeBtn = document.getElementById('btnCloseModal');
+  const editBtn = document.getElementById('btnEditAsset');
+  const deleteBtn = document.getElementById('btnDeleteAsset');
+
+  if (closeBtn) closeBtn.addEventListener('click', closeAssetDetail);
+
+  // Clicking the dark backdrop (not the card itself) also closes it.
+  if (overlay) {
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) closeAssetDetail();
+    });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function () {
+      if (!activeModalAssetId) return;
+      const confirmed = window.confirm('Delete this asset permanently? This cannot be undone.');
+      if (!confirmed) return;
+      deleteAssetById(activeModalAssetId);
+      closeAssetDetail();
+      renderAssetsList();
+      renderDashboard();
+      renderMaturityCalendar();
+    });
+  }
+
+  if (editBtn) {
+    editBtn.addEventListener('click', function () {
+      if (!activeModalAssetId) return;
+      const assetId = activeModalAssetId;
+      closeAssetDetail();
+      navigateToScreen('add-asset');
+      loadAssetForEditing(assetId);
+    });
+  }
+}
+
+/* ---------- 15. EDIT ASSET FLOW ---------- */
+
+let editingAssetId = null;
+
+function loadAssetForEditing(assetId) {
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const asset = assets.find(function (a) { return a.id === assetId; });
+  if (!asset) return;
+
+  editingAssetId = assetId;
+  selectAssetType(asset.type);
+
+  const fields = ASSET_FIELD_CONFIGS[asset.type];
+  fields.forEach(function (field) {
+    const el = document.getElementById('field_' + field.key);
+    if (el && asset[field.key] !== null && asset[field.key] !== undefined) {
+      el.value = asset[field.key];
+    }
+  });
+
+  if (CALC_PREVIEW_FNS[asset.type]) updateCalcPreview(asset.type);
+
+  document.getElementById('typePickerCard').style.display = 'none';
+  document.getElementById('editModeNote').style.display = 'block';
+  document.getElementById('formTitle').textContent = 'Edit ' + (TYPE_LABELS[asset.type] || asset.type) + ' Details';
+  document.getElementById('btnSubmitAsset').textContent = 'Update Asset';
+}
+
+/* ---------- 16. MATURITY CALENDAR (Stage 7) ---------- */
+
+const MATURITY_SECTIONS = [
+  { key: 'matured', title: 'Matured' },
+  { key: 'this-month', title: 'Maturing This Month' },
+  { key: 'next-3', title: 'Next 3 Months' },
+  { key: 'next-6', title: 'Next 6 Months' },
+  { key: 'next-12', title: 'Next 12 Months' },
+  { key: 'later', title: 'Later' }
+];
+
+function getMaturityInfo(asset) {
+  if (!asset.maturityDate) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const maturityDate = new Date(asset.maturityDate);
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysRemaining = Math.round((maturityDate - today) / msPerDay);
+
+  let sectionKey, statusClass, statusLabel;
+  if (daysRemaining < 0) {
+    sectionKey = 'matured'; statusClass = 'matured'; statusLabel = 'Matured';
+  } else if (daysRemaining <= 30) {
+    sectionKey = 'this-month'; statusClass = 'due-soon'; statusLabel = 'Due Soon';
+  } else if (daysRemaining <= 90) {
+    sectionKey = 'next-3'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  } else if (daysRemaining <= 180) {
+    sectionKey = 'next-6'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  } else if (daysRemaining <= 365) {
+    sectionKey = 'next-12'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  } else {
+    sectionKey = 'later'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  }
+
+  return { daysRemaining: daysRemaining, sectionKey: sectionKey, statusClass: statusClass, statusLabel: statusLabel };
+}
+
+function renderMaturityCalendar() {
+  const wrap = document.getElementById('maturityCalendarWrap');
+  const emptyState = document.getElementById('maturityEmptyState');
+  if (!wrap) return;
+
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const withMaturity = assets
+    .map(function (asset) { return { asset: asset, info: getMaturityInfo(asset) }; })
+    .filter(function (item) { return item.info !== null; });
+
+  if (withMaturity.length === 0) {
+    wrap.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  const html = MATURITY_SECTIONS.map(function (section) {
+    const items = withMaturity
+      .filter(function (item) { return item.info.sectionKey === section.key; })
+      .sort(function (a, b) { return a.info.daysRemaining - b.info.daysRemaining; });
+
+    if (items.length === 0) return '';
+
+    const rows = items.map(function (item) {
+      const asset = item.asset;
+      const info = item.info;
+      const invested = getAssetInvestedAmount(asset);
+      const maturityValue = getAssetMaturityValue(asset);
+      const daysLabel = info.daysRemaining < 0
+        ? Math.abs(info.daysRemaining) + ' days ago'
+        : info.daysRemaining + ' days';
+
+      return (
+        '<div class="maturity-row maturity-row--' + info.statusClass + '" data-asset-id="' + asset.id + '">' +
+          '<div>' +
+            '<div class="asset-row__type">' + (TYPE_LABELS[asset.type] || asset.type) + ' — ' + getAssetDisplayName(asset) + '</div>' +
+          '</div>' +
+          '<div><span class="maturity-row__col-label">Institution</span>' + (asset.institution || '—') + '</div>' +
+          '<div><span class="maturity-row__col-label">Invested</span>' + (invested !== null && invested !== undefined ? formatCurrency(invested) : '—') + '</div>' +
+          '<div><span class="maturity-row__col-label">Maturity Date</span>' + asset.maturityDate + '</div>' +
+          '<div><span class="asset-row__maturity-badge badge--' + info.statusClass + '">' + daysLabel + '</span></div>' +
+          '<div><span class="maturity-row__col-label">Maturity Value</span>' + (maturityValue !== null ? formatCurrency(maturityValue) : '—') + '</div>' +
+        '</div>'
+      );
+    }).join('');
+
+    return (
+      '<div class="maturity-section">' +
+        '<h2 class="maturity-section__title">' + section.title + ' (' + items.length + ')</h2>' +
+        rows +
+      '</div>'
+    );
+  }).join('');
+
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('.maturity-row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      openAssetDetail(row.dataset.assetId);
+    });
+  });
+}
+
+/* ---------- 17. CORPUS HISTORY (Stage 8) ---------- */
+
+// The dates called out in the product brief, plus "Today" — one
+// tap fills the date field instead of typing it.
+function getQuickDates() {
+  const today = new Date().toISOString().slice(0, 10);
+  return [
+    { label: '31 Mar 2024', date: '2024-03-31' },
+    { label: '31 Mar 2025', date: '2025-03-31' },
+    { label: '31 Mar 2026', date: '2026-03-31' },
+    { label: 'Today', date: today }
+  ];
+}
+
+function renderQuickDateButtons() {
+  const wrap = document.getElementById('quickDates');
+  if (!wrap) return;
+  wrap.innerHTML = getQuickDates().map(function (q) {
+    return '<button type="button" class="quick-date-btn" data-date="' + q.date + '">' + q.label + '</button>';
+  }).join('');
+
+  wrap.querySelectorAll('.quick-date-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.getElementById('snapshotDate').value = btn.dataset.date;
+    });
+  });
+}
+
+// Total corpus computed fresh from the CURRENT assets — this is
+// what gets locked into a snapshot at the moment you take it.
+function computeCurrentTotalCorpus() {
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const assetValues = {};
+  let total = 0;
+  assets.forEach(function (asset) {
+    const value = getAssetCurrentValue(asset).value;
+    assetValues[asset.id] = value;
+    total += value;
+  });
+  return { total: total, assetValues: assetValues };
+}
+
+function takeSnapshot() {
+  const dateInput = document.getElementById('snapshotDate');
+  const date = dateInput.value;
+  const confirmEl = document.getElementById('snapshotConfirm');
+
+  if (!date) {
+    confirmEl.textContent = 'Please choose a date first.';
+    confirmEl.style.display = 'block';
+    return;
+  }
+
+  const { total, assetValues } = computeCurrentTotalCorpus();
+
+  updateData(STORAGE_KEYS.snapshots, [], function (list) {
+    const existingIndex = list.findIndex(function (s) { return s.date === date; });
+    const snapshot = { id: existingIndex >= 0 ? list[existingIndex].id : generateId(), date: date, totalCorpus: total, assetValues: assetValues };
+    if (existingIndex >= 0) {
+      list[existingIndex] = snapshot;
+    } else {
+      list.push(snapshot);
+    }
+    return list;
+  });
+
+  confirmEl.textContent = 'Snapshot saved for ' + date + ': ' + formatCurrency(total);
+  confirmEl.style.display = 'block';
+
+  renderSnapshotList();
+  renderGrowthChart();
+}
+
+function renderSnapshotList() {
+  const list = document.getElementById('snapshotList');
+  if (!list) return;
+
+  const snapshots = loadData(STORAGE_KEYS.snapshots, []).slice().sort(function (a, b) {
+    return new Date(b.date) - new Date(a.date);
+  });
+
+  if (snapshots.length === 0) {
+    list.innerHTML = '<li class="allocation__empty-state">No snapshots yet — take your first one above.</li>';
+    return;
+  }
+
+  list.innerHTML = snapshots.map(function (s) {
+    return (
+      '<li>' +
+        '<span class="snapshot-list__date">' + s.date + '</span>' +
+        '<span class="snapshot-list__value">' + formatCurrency(s.totalCorpus) + '</span>' +
+        '<button type="button" class="snapshot-list__delete" data-snapshot-id="' + s.id + '" aria-label="Delete snapshot">×</button>' +
+      '</li>'
+    );
+  }).join('');
+
+  list.querySelectorAll('.snapshot-list__delete').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const confirmed = window.confirm('Delete this snapshot?');
+      if (!confirmed) return;
+      updateData(STORAGE_KEYS.snapshots, [], function (arr) {
+        return arr.filter(function (s) { return s.id !== btn.dataset.snapshotId; });
+      });
+      renderSnapshotList();
+      renderGrowthChart();
+    });
+  });
+}
+
+function renderGrowthChart() {
+  const wrap = document.getElementById('growthChartWrap');
+  if (!wrap) return;
+
+  const snapshots = loadData(STORAGE_KEYS.snapshots, []).slice().sort(function (a, b) {
+    return new Date(a.date) - new Date(b.date);
+  });
+
+  if (snapshots.length < 2) {
+    wrap.innerHTML = '<p class="allocation__empty-state">Take at least 2 snapshots (on different dates) to see a growth chart.</p>';
+    return;
+  }
+
+  const width = 600, height = 220, padding = 36;
+  const values = snapshots.map(function (s) { return s.totalCorpus; });
+  const maxValue = Math.max.apply(null, values) * 1.1 || 1;
+  const minValue = 0;
+
+  const stepX = (width - padding * 2) / (snapshots.length - 1);
+
+  const points = snapshots.map(function (s, i) {
+    const x = padding + i * stepX;
+    const y = height - padding - ((s.totalCorpus - minValue) / (maxValue - minValue)) * (height - padding * 2);
+    return { x: x, y: y, snapshot: s };
+  });
+
+  const linePath = points.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p.x + ',' + p.y; }).join(' ');
+  const areaPath = linePath + ' L' + points[points.length - 1].x + ',' + (height - padding) + ' L' + points[0].x + ',' + (height - padding) + ' Z';
+
+  const circles = points.map(function (p) {
+    return '<circle class="growth-chart__point" cx="' + p.x + '" cy="' + p.y + '" r="3.5"><title>' + p.snapshot.date + ': ' + formatCurrency(p.snapshot.totalCorpus) + '</title></circle>';
+  }).join('');
+
+  const labels = points.map(function (p, i) {
+    // Only label every other point on small charts to avoid crowding.
+    if (snapshots.length > 6 && i % 2 !== 0) return '';
+    return '<text class="growth-chart__label" x="' + p.x + '" y="' + (height - 8) + '" text-anchor="middle">' + p.snapshot.date.slice(2) + '</text>';
+  }).join('');
+
+  wrap.innerHTML =
+    '<svg class="growth-chart" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="xMidYMid meet">' +
+      '<path class="growth-chart__area" d="' + areaPath + '"></path>' +
+      '<path class="growth-chart__line" d="' + linePath + '"></path>' +
+      circles + labels +
+    '</svg>';
+}
+
+function lookupCorpusOnDate() {
+  const date = document.getElementById('lookupDate').value;
+  const resultEl = document.getElementById('lookupResult');
+
+  if (!date) {
+    resultEl.textContent = 'Please choose a date first.';
+    return;
+  }
+
+  const snapshots = loadData(STORAGE_KEYS.snapshots, []);
+  const match = snapshots.find(function (s) { return s.date === date; });
+
+  resultEl.innerHTML = match
+    ? 'Total corpus on <strong>' + date + '</strong>: <strong>' + formatCurrency(match.totalCorpus) + '</strong>'
+    : 'No snapshot recorded for ' + date + '. Take a snapshot on that date to see it here.';
+}
+
+function renderCorpusHistory() {
+  renderSnapshotList();
+  renderGrowthChart();
+}
+
+function initCorpusHistoryScreen() {
+  renderQuickDateButtons();
+
+  const takeBtn = document.getElementById('btnTakeSnapshot');
+  if (takeBtn) takeBtn.addEventListener('click', takeSnapshot);
+
+  const lookupBtn = document.getElementById('btnLookupDate');
+  if (lookupBtn) lookupBtn.addEventListener('click', lookupCorpusOnDate);
 }
 
 /* ---------- APP START ---------- */
@@ -1161,4 +1737,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initSettingsScreen();
   initDashboardSort();
   initAddAssetScreen();
+  initMyAssetsScreen();
+  initAssetDetailModal();
+  initCorpusHistoryScreen();
 });
