@@ -1,1080 +1,1877 @@
 /* =============================================================
-   WEALTH360 — STYLE SHEET
+   WEALTH360 — SCRIPT
    Organized in sections so a non-technical founder can find things:
-   1. Design tokens (colors, fonts, spacing)
-   2. Reset / base
-   3. App shell (top bar, side nav, bottom nav)
-   4. Screens & placeholder content
-   5. Responsive breakpoints
+   1. Navigation (switching between the 6 screens)
+   Later stages will add: data layer, calculations, rendering, etc.
+   Each new stage gets its own clearly labeled section below.
 ============================================================= */
 
-/* ---------- 1. DESIGN TOKENS ----------
-   Visual identity: an Indian bank passbook, reimagined.
-   Thin ruled lines, a stamped "DEMO DATA" badge, ledger-style
-   monospace numerals for money — quiet, trustworthy, precise. */
-:root {
-  /* Colors */
-  --color-paper:      #F4F6F4;   /* app background — cool off-white, not cream */
-  --color-ink:        #10241E;   /* primary text — deep forest-ink */
-  --color-ink-soft:   #4B5C55;   /* secondary text */
-  --color-line:       #DCE2DE;   /* hairline rules, borders */
-  --color-surface:    #FFFFFF;   /* cards */
-  --color-teal:       #146356;   /* primary accent — growth / trust */
-  --color-teal-dark:  #0E4A40;
-  --color-gold:       #B98A2E;   /* secondary accent — maturity / premium */
-  --color-danger:     #B4463D;
-
-  /* Type */
-  --font-display: 'Fraunces', serif;
-  --font-body:    'Inter', sans-serif;
-  --font-mono:    'IBM Plex Mono', monospace;
-
-  /* Spacing scale */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-
-  /* Shape */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-
-  /* Layout */
-  --sidenav-width: 232px;
-  --topbar-height: 64px;
-  --bottomnav-height: 68px;
-}
-
-/* ---------- 2. RESET / BASE ---------- */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { -webkit-text-size-adjust: 100%; }
-
-body {
-  font-family: var(--font-body);
-  background: var(--color-paper);
-  color: var(--color-ink);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-button {
-  font-family: inherit;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: inherit;
-}
-
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--color-teal);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
-}
-
-/* ---------- 3. APP SHELL ---------- */
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Top bar */
-.topbar {
-  height: var(--topbar-height);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-5);
-  border-bottom: 1px solid var(--color-line);
-  background: var(--color-surface);
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-.topbar__brand {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
-.topbar__mark {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--color-teal);
-  border: 1px solid var(--color-teal);
-  border-radius: var(--radius-sm);
-  padding: 2px 6px;
-}
-
-.topbar__name {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-/* The "bank stamp" demo badge — rotated slightly like an ink stamp */
-.topbar__demo-badge {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--color-gold);
-  border: 1.5px solid var(--color-gold);
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
-  transform: rotate(-2deg);
-}
-
-/* App body = side nav + screens, sits below top bar */
-.app__body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-/* Desktop side nav */
-.sidenav {
-  width: var(--sidenav-width);
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-5) var(--space-3);
-  border-right: 1px solid var(--color-line);
-  background: var(--color-surface);
-}
-
-.navitem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-ink-soft);
-  text-align: left;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.navitem:hover {
-  background: var(--color-paper);
-  color: var(--color-ink);
-}
-
-.navitem.is-active {
-  background: var(--color-teal);
-  color: #fff;
-}
-
-.navitem__icon {
-  width: 18px;
-  text-align: center;
-  color: var(--color-gold);
-  font-size: 15px;
-}
-
-.navitem.is-active .navitem__icon {
-  color: #fff;
-}
-
-/* Mobile bottom nav — hidden on desktop */
-.bottomnav {
-  display: none;
-}
-
-/* ---------- 4. SCREENS & PLACEHOLDER CONTENT ---------- */
-.screens {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-7) var(--space-6);
-}
-
-.screen {
-  display: none;
-  animation: fadeIn 0.2s ease;
-}
-
-.screen.is-active {
-  display: block;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.placeholder {
-  max-width: 560px;
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  border-top: 3px solid var(--color-gold);
-}
-
-.placeholder__eyebrow {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-gold);
-  margin-bottom: var(--space-3);
-}
-
-.placeholder__title {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 500;
-  line-height: 1.3;
-  color: var(--color-ink);
-  margin-bottom: var(--space-3);
-}
-
-.placeholder__body {
-  font-size: 14px;
-  color: var(--color-ink-soft);
-}
-
-.placeholder__body--footnote {
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px dashed var(--color-line);
-  font-size: 12px;
-}
-
-/* Settings screen action buttons */
-.settings-actions {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-top: var(--space-5);
-}
-
-.btn {
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-sm);
-  transition: opacity 0.15s ease, background 0.15s ease;
-}
-
-.btn:hover { opacity: 0.9; }
-
-.btn--primary {
-  background: var(--color-teal);
-  color: #fff;
-}
-
-.btn--danger {
-  background: #fff;
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-}
-
-/* Read-out box showing what's currently in localStorage */
-.data-summary {
-  margin-top: var(--space-5);
-  padding: var(--space-4);
-  background: var(--color-paper);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-ink-soft);
-  line-height: 1.8;
-}
-
-.data-summary strong {
-  color: var(--color-ink);
-}
-
-/* ---------- 4b. DASHBOARD ---------- */
-
-.corpus-card {
-  background: linear-gradient(135deg, var(--color-teal-dark), var(--color-teal));
-  color: #fff;
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  margin-bottom: var(--space-5);
-}
-
-.corpus-card__label {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.8;
-  margin-bottom: var(--space-2);
-}
-
-.corpus-card__value {
-  font-family: var(--font-display);
-  font-size: 44px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.corpus-card__note {
-  margin-top: var(--space-3);
-  font-size: 12.5px;
-  opacity: 0.85;
-}
-
-.corpus-card__note:empty { display: none; }
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-5);
-  margin-bottom: var(--space-5);
-}
-
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-}
-
-.card__title {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 500;
-  margin-bottom: var(--space-4);
-}
-
-.card__header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-.card__header-row .card__title { margin-bottom: 0; }
-
-.link-btn {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-teal);
-}
-
-.link-btn:hover { text-decoration: underline; }
-
-/* Asset allocation donut */
-.allocation {
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  flex-wrap: wrap;
-}
-
-.allocation__svg {
-  width: 140px;
-  height: 140px;
-  flex-shrink: 0;
-  transform: rotate(-90deg);
-}
-
-.allocation__legend {
-  list-style: none;
-  flex: 1;
-  min-width: 160px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.allocation__legend li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 12.5px;
-}
-
-.allocation__swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-.allocation__legend-name {
-  flex: 1;
-  color: var(--color-ink-soft);
-}
-
-.allocation__legend-value {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--color-ink);
-}
-
-.allocation__empty-state {
-  font-size: 13px;
-  color: var(--color-ink-soft);
-}
-
-/* Institution list */
-.institution-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.institution-list li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.institution-list__name {
-  flex: 1;
-  font-size: 13px;
-  color: var(--color-ink);
-}
-
-.institution-list__value {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.institution-list__bar-track {
-  flex-basis: 100%;
-  height: 4px;
-  background: var(--color-paper);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: -6px;
-}
-
-.institution-list__bar-fill {
-  height: 100%;
-  background: var(--color-gold);
-  border-radius: 2px;
-}
-
-/* Quick actions */
-.quick-actions__row {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.btn--outline {
-  background: #fff;
-  color: var(--color-teal);
-  border: 1px solid var(--color-teal);
-}
-
-/* ---------- 4c. ADD ASSET SCREEN ---------- */
-
-.add-asset-card {
-  max-width: 640px;
-  margin-bottom: var(--space-5);
-}
-
-.type-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: var(--space-2);
-}
-
-.type-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-2);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-ink-soft);
-  text-align: center;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-}
-
-.type-btn:hover {
-  border-color: var(--color-teal);
-  color: var(--color-ink);
-}
-
-.type-btn.is-selected {
-  border-color: var(--color-teal);
-  background: var(--color-teal);
-  color: #fff;
-}
-
-.type-btn__icon {
-  font-size: 18px;
-  color: var(--color-gold);
-}
-
-.type-btn.is-selected .type-btn__icon {
-  color: #fff;
-}
-
-/* Dynamic form fields */
-.form-group {
-  margin-bottom: var(--space-4);
-}
-
-.form-group label {
-  display: block;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--color-ink);
-  margin-bottom: var(--space-2);
-}
-
-.form-group .hint {
-  display: block;
-  font-size: 11.5px;
-  font-weight: 400;
-  color: var(--color-ink-soft);
-  margin-top: 2px;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  font-family: var(--font-body);
-  font-size: 14px;
-  padding: var(--space-3);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-ink);
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: 2px solid var(--color-teal);
-  outline-offset: 1px;
-  border-color: var(--color-teal);
-}
-
-.form-group input:disabled {
-  background: var(--color-paper);
-  color: var(--color-ink-soft);
-  cursor: not-allowed;
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 60px;
-}
-
-.form-errors {
-  list-style: none;
-  background: #FBEAE8;
-  border: 1px solid var(--color-danger);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  margin-bottom: var(--space-4);
-  font-size: 13px;
-  color: var(--color-danger);
-}
-
-.form-errors li { margin-bottom: var(--space-1); }
-.form-errors li:last-child { margin-bottom: 0; }
-
-.calc-preview {
-  background: var(--color-paper);
-  border: 1px solid var(--color-line);
-  border-left: 3px solid var(--color-gold);
-  border-radius: var(--radius-sm);
-  padding: var(--space-4);
-  margin-bottom: var(--space-4);
-  font-size: 13px;
-  color: var(--color-ink-soft);
-}
-
-.calc-preview__value {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--color-ink);
-  font-size: 16px;
-  display: block;
-  margin-top: 2px;
-}
-
-.calc-preview__diff-note {
-  margin-top: var(--space-2);
-  color: var(--color-danger);
-  font-size: 12px;
-}
-
-.form-actions {
-  display: flex;
-  gap: var(--space-3);
-}
-
-.success-banner {
-  margin-top: var(--space-4);
-  padding: var(--space-4);
-  background: #E9F3EF;
-  border: 1px solid var(--color-teal);
-  border-radius: var(--radius-md);
-}
-
-.success-banner__actions {
-  display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-
-/* ---------- 4d. MY ASSETS ---------- */
-
-.assets-toolbar {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-5);
-}
-
-.assets-toolbar__search {
-  flex: 2;
-  min-width: 200px;
-  font-family: var(--font-body);
-  font-size: 14px;
-  padding: var(--space-3);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-}
-
-.assets-toolbar__select {
-  flex: 1;
-  min-width: 160px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  padding: var(--space-3);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-}
-
-.asset-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1.2fr 1fr 1fr 1fr;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-2);
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-.asset-row:hover {
-  border-color: var(--color-teal);
-}
-
-.asset-row__col-label {
-  display: none; /* shown only in mobile stacked layout */
-}
-
-.asset-row__type {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.asset-row__institution {
-  font-size: 12px;
-  color: var(--color-ink-soft);
-  margin-top: 2px;
-}
-
-.asset-row__value {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--color-ink);
-}
-
-.asset-row__maturity-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  margin-top: 4px;
-}
-
-.badge--due-soon { background: #FBEAE8; color: var(--color-danger); }
-.badge--upcoming { background: #EEF2EC; color: var(--color-teal-dark); }
-.badge--matured { background: var(--color-line); color: var(--color-ink-soft); }
-
-.empty-state {
-  text-align: center;
-  padding: var(--space-7) var(--space-5);
-  color: var(--color-ink-soft);
-  font-size: 14px;
-}
-
-.empty-state .btn { margin-top: var(--space-4); }
-
-.edit-mode-note {
-  max-width: 640px;
-  font-size: 12.5px;
-  color: var(--color-gold);
-  background: #FBF3E4;
-  border: 1px solid var(--color-gold);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-/* ---------- 4e. MATURITY CALENDAR ---------- */
-
-.maturity-section {
-  margin-bottom: var(--space-6);
-}
-
-.maturity-section__title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: var(--space-3);
-  color: var(--color-ink);
-}
-
-.maturity-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1.2fr 1fr 1fr 0.8fr 1fr;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-left: 3px solid var(--color-line);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-2);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.maturity-row--due-soon { border-left-color: var(--color-danger); }
-.maturity-row--upcoming { border-left-color: var(--color-teal); }
-.maturity-row--matured { border-left-color: var(--color-ink-soft); }
-
-.maturity-row__col-label {
-  display: none;
-}
-
-/* ---------- 4f. MODAL ---------- */
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(16, 36, 30, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  z-index: 50;
-}
-
-.modal {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  max-width: 480px;
-  width: 100%;
-  max-height: 85vh;
-  overflow-y: auto;
-  position: relative;
-}
-
-.modal__close {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-  font-size: 22px;
-  line-height: 1;
-  color: var(--color-ink-soft);
-}
-
-.modal__close:hover { color: var(--color-ink); }
-
-.modal-detail__row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  border-bottom: 1px dashed var(--color-line);
-  font-size: 13px;
-}
-
-.modal-detail__row:last-child { border-bottom: none; }
-
-.modal-detail__label { color: var(--color-ink-soft); }
-.modal-detail__value { color: var(--color-ink); font-weight: 500; text-align: right; }
-
-.modal-detail__headline {
-  font-family: var(--font-display);
-  font-size: 20px;
-  margin-bottom: var(--space-4);
-}
-
-.trust-notice__body {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--color-ink-soft);
-}
-
-.privacy-note {
-  margin-top: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: #EEF2EC;
-  border-left: 3px solid var(--color-teal);
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
-  color: var(--color-teal-dark);
-}
-
-.modal__actions {
-  display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-5);
-}
-
-.btn--danger {
-  background: #fff;
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-}
-
-/* ---------- 4g. CORPUS HISTORY ---------- */
-
-.quick-dates {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-4);
-}
-
-.quick-date-btn {
-  font-size: 12px;
-  font-weight: 600;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-line);
-  border-radius: 999px;
-  color: var(--color-ink-soft);
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.quick-date-btn:hover {
-  border-color: var(--color-teal);
-  color: var(--color-teal);
-}
-
-.snapshot-confirm {
-  margin-top: var(--space-3);
-  font-size: 13px;
-  color: var(--color-teal-dark);
-  font-weight: 500;
-}
-
-.snapshot-lookup-result {
-  margin-top: var(--space-3);
-  font-size: 14px;
-  color: var(--color-ink);
-}
-
-.snapshot-lookup-result strong {
-  font-family: var(--font-mono);
-}
-
-.snapshot-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.snapshot-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-}
-
-.snapshot-list__date {
-  color: var(--color-ink-soft);
-}
-
-.snapshot-list__value {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.snapshot-list__delete {
-  color: var(--color-danger);
-  font-size: 16px;
-  line-height: 1;
-  padding: 0 var(--space-2);
-}
-
-.growth-chart {
-  width: 100%;
-  height: auto;
-}
-
-.growth-chart__line {
-  fill: none;
-  stroke: var(--color-teal);
-  stroke-width: 2.5;
-}
-
-.growth-chart__area {
-  fill: var(--color-teal);
-  opacity: 0.08;
-}
-
-.growth-chart__point {
-  fill: var(--color-teal);
-}
-
-.growth-chart__label {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  fill: var(--color-ink-soft);
-}
-
-@media (max-width: 860px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
+/* ---------- 1. NAVIGATION ----------
+   Every nav button (side nav + bottom nav) has a
+   data-screen="dashboard" (etc) attribute. Clicking one shows the
+   matching <section id="screen-dashboard"> and hides the rest. */
+
+function initNavigation() {
+  const navButtons = document.querySelectorAll('[data-screen]');
+  const screens = document.querySelectorAll('.screen');
+
+  function showScreen(screenName) {
+    // Hide every screen, then show only the one that was requested.
+    screens.forEach(function (screen) {
+      const isMatch = screen.id === 'screen-' + screenName;
+      screen.classList.toggle('is-active', isMatch);
+    });
+
+    // Highlight the matching nav button in BOTH the side nav and
+    // the bottom nav (a screen can be reached from either).
+    navButtons.forEach(function (btn) {
+      btn.classList.toggle('is-active', btn.dataset.screen === screenName);
+    });
+
+    // Keep the browser's back/forward buttons and page refresh
+    // working sensibly by remembering the current screen.
+    window.location.hash = screenName;
+
+    // Screens that show live data re-render every time they're
+    // opened, in case data changed elsewhere (e.g. Settings).
+    if (screenName === 'dashboard') renderDashboard();
+    if (screenName === 'my-assets') renderAssetsList();
+    if (screenName === 'maturity-calendar') renderMaturityCalendar();
+    if (screenName === 'corpus-history') renderCorpusHistory();
   }
 
-  .corpus-card__value {
-    font-size: 32px;
-  }
+  // Make navigation available outside this function too — Quick
+  // Action buttons on the Dashboard use this to jump to other
+  // screens without duplicating the nav logic.
+  window.navigateToScreen = showScreen;
 
-  .sidenav {
-    display: none;
-  }
+  navButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      showScreen(btn.dataset.screen);
+    });
+  });
 
-  .app__body {
-    padding-bottom: var(--bottomnav-height);
-  }
+  // Quick Action buttons (and any future button) use
+  // data-navigate="screen-name" instead of data-screen, so they
+  // don't get treated as nav-highlight buttons.
+  document.querySelectorAll('[data-navigate]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      showScreen(btn.dataset.navigate);
+    });
+  });
 
-  .screens {
-    padding: var(--space-5) var(--space-4);
-  }
+  // On load: open whichever screen is in the URL hash (if valid),
+  // otherwise default to the Dashboard.
+  const requested = window.location.hash.replace('#', '');
+  const validScreens = Array.from(screens).map(function (s) {
+    return s.id.replace('screen-', '');
+  });
+  showScreen(validScreens.includes(requested) ? requested : 'dashboard');
+}
 
-  .placeholder {
-    padding: var(--space-5);
-  }
+/* ---------- 2. DATA LAYER (localStorage wrapper) ----------
+   Every other part of the app reads/writes data ONLY through these
+   functions — never touches localStorage directly. That means if
+   Wealth360 ever moves to a real database, only this section needs
+   to change; nothing else in the app does. */
 
-  .placeholder__title {
-    font-size: 21px;
-  }
+const STORAGE_KEYS = {
+  assets: 'wealth360_assets',
+  institutions: 'wealth360_institutions',   // user-added institutions only
+  snapshots: 'wealth360_snapshots',
+  settings: 'wealth360_settings',
+  trustNoticeSeen: 'wealth360_trust_notice_seen'  // deliberately NOT cleared by "Clear All Data"
+};
 
-  .bottomnav {
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    height: var(--bottomnav-height);
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-line);
-    padding-bottom: env(safe-area-inset-bottom);
-    z-index: 20;
-  }
-
-  .bottomnav__item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    color: var(--color-ink-soft);
-    font-size: 10px;
-    font-weight: 500;
-    padding: var(--space-2);
-    min-width: 44px;
-  }
-
-  .bottomnav__icon {
-    font-size: 18px;
-    color: var(--color-ink-soft);
-  }
-
-  .bottomnav__item.is-active {
-    color: var(--color-teal);
-  }
-
-  .bottomnav__item.is-active .bottomnav__icon {
-    color: var(--color-teal);
-  }
-
-  /* The Add Asset button reads as a raised "action" button */
-  .bottomnav__item--fab .bottomnav__icon {
-    background: var(--color-teal);
-    color: #fff;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-  }
-
-  /* My Assets: table rows become stacked cards, each field labeled */
-  .asset-row,
-  .maturity-row {
-    grid-template-columns: 1fr;
-    gap: 2px;
-  }
-
-  .asset-row__col-label,
-  .maturity-row__col-label {
-    display: inline;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--color-ink-soft);
-    margin-right: var(--space-2);
-  }
-
-  .assets-toolbar {
-    flex-direction: column;
-  }
-
-  .assets-toolbar__search,
-  .assets-toolbar__select {
-    flex: none;
-    width: 100%;
+// Save any JS value under a key. Returns true on success.
+function saveData(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (err) {
+    console.error('Wealth360: failed to save "' + key + '"', err);
+    return false;
   }
 }
+
+// Load a value back out. If it's missing or corrupted (e.g. the
+// browser storage got messed with by hand), quietly fall back to
+// `fallback` instead of crashing the app.
+function loadData(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Wealth360: corrupted data for "' + key + '", using fallback', err);
+    return fallback;
+  }
+}
+
+// Remove one key entirely.
+function deleteData(key) {
+  localStorage.removeItem(key);
+}
+
+// Convenience: load an array/object, run `updaterFn` on it, save
+// the result. Used for "add one asset to the list" type operations.
+function updateData(key, fallback, updaterFn) {
+  const current = loadData(key, fallback);
+  const updated = updaterFn(current);
+  saveData(key, updated);
+  return updated;
+}
+
+// Simple unique ID generator — good enough for a local prototype.
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+/* ---------- 3. INSTITUTION MASTER ----------
+   ONE central list. Every form's institution dropdown reads from
+   here, so adding a bank in the future only means editing this
+   array, not hunting through every form in the app. */
+
+const BUILT_IN_INSTITUTIONS = [
+  // Public Sector Banks
+  { id: 'sbi', name: 'State Bank of India', category: 'Public Sector Bank' },
+  { id: 'bob', name: 'Bank of Baroda', category: 'Public Sector Bank' },
+  { id: 'boi', name: 'Bank of India', category: 'Public Sector Bank' },
+  { id: 'bom', name: 'Bank of Maharashtra', category: 'Public Sector Bank' },
+  { id: 'canara', name: 'Canara Bank', category: 'Public Sector Bank' },
+  { id: 'central-bank', name: 'Central Bank of India', category: 'Public Sector Bank' },
+  { id: 'indian-bank', name: 'Indian Bank', category: 'Public Sector Bank' },
+  { id: 'iob', name: 'Indian Overseas Bank', category: 'Public Sector Bank' },
+  { id: 'pnb', name: 'Punjab National Bank', category: 'Public Sector Bank' },
+  { id: 'psb', name: 'Punjab & Sind Bank', category: 'Public Sector Bank' },
+  { id: 'uco', name: 'UCO Bank', category: 'Public Sector Bank' },
+  { id: 'ubi', name: 'Union Bank of India', category: 'Public Sector Bank' },
+
+  // Private Sector Banks
+  { id: 'hdfc', name: 'HDFC Bank', category: 'Private Sector Bank' },
+  { id: 'icici', name: 'ICICI Bank', category: 'Private Sector Bank' },
+  { id: 'axis', name: 'Axis Bank', category: 'Private Sector Bank' },
+  { id: 'kotak', name: 'Kotak Mahindra Bank', category: 'Private Sector Bank' },
+  { id: 'indusind', name: 'IndusInd Bank', category: 'Private Sector Bank' },
+  { id: 'idfc-first', name: 'IDFC FIRST Bank', category: 'Private Sector Bank' },
+  { id: 'federal', name: 'Federal Bank', category: 'Private Sector Bank' },
+  { id: 'yes', name: 'Yes Bank', category: 'Private Sector Bank' },
+  { id: 'rbl', name: 'RBL Bank', category: 'Private Sector Bank' },
+  { id: 'bandhan', name: 'Bandhan Bank', category: 'Private Sector Bank' },
+  { id: 'csb', name: 'CSB Bank', category: 'Private Sector Bank' },
+  { id: 'city-union', name: 'City Union Bank', category: 'Private Sector Bank' },
+  { id: 'dcb', name: 'DCB Bank', category: 'Private Sector Bank' },
+  { id: 'dhanlaxmi', name: 'Dhanlaxmi Bank', category: 'Private Sector Bank' },
+  { id: 'jk-bank', name: 'Jammu & Kashmir Bank', category: 'Private Sector Bank' },
+  { id: 'karnataka-bank', name: 'Karnataka Bank', category: 'Private Sector Bank' },
+  { id: 'kvb', name: 'Karur Vysya Bank', category: 'Private Sector Bank' },
+  { id: 'south-indian', name: 'South Indian Bank', category: 'Private Sector Bank' },
+  { id: 'tmb', name: 'Tamilnad Mercantile Bank', category: 'Private Sector Bank' },
+  { id: 'nainital', name: 'Nainital Bank', category: 'Private Sector Bank' },
+  { id: 'idbi', name: 'IDBI Bank', category: 'Private Sector Bank' },
+
+  // Small Finance / Regional Rural / Payments Banks (representative)
+  { id: 'au-sfb', name: 'AU Small Finance Bank', category: 'Small Finance Bank' },
+  { id: 'equitas-sfb', name: 'Equitas Small Finance Bank', category: 'Small Finance Bank' },
+  { id: 'ujjivan-sfb', name: 'Ujjivan Small Finance Bank', category: 'Small Finance Bank' },
+  { id: 'rrb-generic', name: 'Regional Rural Bank', category: 'Regional Rural Bank' },
+  { id: 'airtel-payments', name: 'Airtel Payments Bank', category: 'Payments Bank' },
+  { id: 'india-post-payments', name: 'India Post Payments Bank', category: 'Payments Bank' },
+
+  // Other institutions
+  { id: 'india-post', name: 'India Post', category: 'Government / Post' },
+  { id: 'lic', name: 'LIC', category: 'Insurance' },
+  { id: 'rbi', name: 'RBI', category: 'Government / Post' },
+  { id: 'other', name: 'Other Institution', category: 'Other' }
+];
+
+// Returns built-in institutions + any the user has added, combined.
+function getAllInstitutions() {
+  const userAdded = loadData(STORAGE_KEYS.institutions, []);
+  return BUILT_IN_INSTITUTIONS.concat(userAdded);
+}
+
+// User picks "+ Add New Institution" and types a name.
+function addCustomInstitution(name) {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+
+  const newInstitution = {
+    id: 'custom-' + generateId(),
+    name: trimmed,
+    category: 'Custom'
+  };
+
+  updateData(STORAGE_KEYS.institutions, [], function (list) {
+    list.push(newInstitution);
+    return list;
+  });
+
+  return newInstitution;
+}
+
+// Case-insensitive search across all institutions — powers the
+// searchable institution picker in the Add Asset screen (Stage 4).
+function searchInstitutions(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return getAllInstitutions();
+  return getAllInstitutions().filter(function (inst) {
+    return inst.name.toLowerCase().includes(q);
+  });
+}
+
+/* ---------- 4. CURRENCY FORMATTING ----------
+   One reusable function so every screen displays money the same
+   way: Indian digit grouping with a ₹ symbol. */
+function formatCurrency(amount) {
+  const number = Number(amount) || 0;
+  const formatted = number.toLocaleString('en-IN', {
+    maximumFractionDigits: 0
+  });
+  return '₹' + formatted;
+}
+
+/* ---------- 5. DEMO DATA ----------
+   Realistic, clearly-fictional sample assets covering all 14 asset
+   types, so the app never opens empty and you can see the whole
+   product working end to end. */
+
+function buildDemoAssets() {
+  return [
+    {
+      id: generateId(), type: 'savings', institution: 'State Bank of India',
+      accountNumber: 'XXXX-4821', currentBalance: 185000, date: '2026-08-01',
+      notes: 'Primary salary account'
+    },
+    {
+      id: generateId(), type: 'savings', institution: 'HDFC Bank',
+      accountNumber: 'XXXX-1190', currentBalance: 62000, date: '2026-08-01',
+      notes: 'Joint household account'
+    },
+    {
+      id: generateId(), type: 'shares', institution: 'Zerodha',
+      company: 'Reliance Industries', quantity: 40, purchasePrice: 2450,
+      purchaseDate: '2023-04-12', currentValue: 118000, notes: ''
+    },
+    {
+      id: generateId(), type: 'mutual_fund', institution: 'HDFC Mutual Fund',
+      fundName: 'HDFC Flexi Cap Fund', investmentMode: 'SIP',
+      sipMonthlyAmount: 10000, sipStartDate: '2022-01-15',
+      currentValue: 412000, notes: 'SIP, monthly'
+    },
+    {
+      id: generateId(), type: 'fd', institution: 'ICICI Bank',
+      investmentAmount: 500000, investmentDate: '2024-06-01', interestRate: 7.1,
+      tenureMonths: 36, compounding: 'Quarterly', maturityDate: '2027-06-01',
+      maturityValueEntered: null
+    },
+    {
+      id: generateId(), type: 'rd', institution: 'Punjab National Bank',
+      monthlyDeposit: 10000, startDate: '2025-01-05', tenureMonths: 24,
+      interestRate: 6.8, maturityDate: '2027-01-05', maturityValueEntered: null
+    },
+    {
+      id: generateId(), type: 'epf', institution: 'EPFO',
+      currentBalance: 620000, contribution: 7200, interestRate: 8.25,
+      currentValue: 620000, notes: 'Via employer'
+    },
+    {
+      id: generateId(), type: 'ppf', institution: 'State Bank of India',
+      openingDate: '2016-04-01', currentValue: 890000, contributions: 150000,
+      interestRate: 7.1, maturityDate: '2031-04-01', maturityValueEntered: null
+    },
+    {
+      id: generateId(), type: 'nps', institution: 'HDFC Pension Fund',
+      currentValue: 275000, investmentMode: 'Monthly', monthlyContribution: 5000,
+      investmentDate: '2021-07-01', notes: 'Tier I'
+    },
+    {
+      id: generateId(), type: 'ssy', institution: 'India Post',
+      openingDate: '2019-02-10', deposits: 300000, currentBalance: 365000,
+      interestRate: 8.2, maturityDate: '2040-02-10', maturityValueEntered: null
+    },
+    {
+      id: generateId(), type: 'lic', institution: 'LIC',
+      policyName: 'Jeevan Anand', policyNumber: 'LIC-772XXXXX', premium: 24000,
+      premiumFrequency: 'Yearly', startDate: '2015-03-20', policyTermYears: 20,
+      maturityDate: '2035-03-20', maturityValueEntered: 1200000, currentValue: 340000
+    },
+    {
+      id: generateId(), type: 'bond', institution: 'RBI',
+      bondName: 'Sovereign Gold Bond 2023-24 Series II', investmentAmount: 118000,
+      investmentDate: '2023-09-11', interestRate: 2.5, tenureYears: 8,
+      maturityDate: '2031-09-11', maturityValueEntered: null
+    },
+    {
+      id: generateId(), type: 'gold', weight: 45, weightUnit: 'grams',
+      purchaseDate: '2021-11-04', purchasePrice: 4850, currentPrice: 7350
+    },
+    {
+      id: generateId(), type: 'silver', weight: 1.2, weightUnit: 'kilograms',
+      purchaseDate: '2022-08-19', purchasePrice: 62000, currentPrice: 91000
+    },
+    {
+      id: generateId(), type: 'other', institution: 'Other Institution',
+      assetName: 'Company ESOP Pool', investmentAmount: 0, investmentDate: '2022-01-01',
+      currentValue: 210000, interestRate: null, maturityDate: null,
+      maturityValueEntered: null, notes: 'Vested shares, private valuation'
+    }
+  ];
+}
+
+function loadDemoData() {
+  saveData(STORAGE_KEYS.assets, buildDemoAssets());
+  updateData(STORAGE_KEYS.settings, {}, function (settings) {
+    settings.demoMode = true;
+    return settings;
+  });
+}
+
+function clearAllData() {
+  deleteData(STORAGE_KEYS.assets);
+  deleteData(STORAGE_KEYS.institutions);
+  deleteData(STORAGE_KEYS.snapshots);
+  updateData(STORAGE_KEYS.settings, {}, function (settings) {
+    settings.demoMode = false;
+    return settings;
+  });
+}
+
+/* ---------- 6. SETTINGS SCREEN WIRING (temporary test harness) ----------
+   The real Settings screen UI comes in Stage 9. For now this just
+   proves the data layer above actually works, by showing what's in
+   localStorage and letting you load/clear demo data. */
+
+function renderDataSummary() {
+  const summaryEl = document.getElementById('dataSummary');
+  if (!summaryEl) return;
+
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const userInstitutions = loadData(STORAGE_KEYS.institutions, []);
+  const settings = loadData(STORAGE_KEYS.settings, {});
+
+  // Quick rough total just to sanity-check numbers are saving
+  // correctly. The real corpus calculation engine arrives in Stage 6.
+  let roughTotal = 0;
+  assets.forEach(function (asset) {
+    if (typeof asset.currentValue === 'number') roughTotal += asset.currentValue;
+    if (typeof asset.currentBalance === 'number') roughTotal += asset.currentBalance;
+    if (asset.type === 'gold' || asset.type === 'silver') {
+      const grams = asset.weightUnit === 'kilograms' ? asset.weight * 1000
+        : asset.weightUnit === 'ounces' ? asset.weight * 31.1035
+        : asset.weight;
+      roughTotal += grams * asset.currentPrice;
+    }
+  });
+
+  summaryEl.innerHTML =
+    '<div><strong>Assets stored:</strong> ' + assets.length + '</div>' +
+    '<div><strong>Custom institutions:</strong> ' + userInstitutions.length + '</div>' +
+    '<div><strong>Demo mode:</strong> ' + (settings.demoMode ? 'On' : 'Off') + '</div>' +
+    '<div><strong>Rough total (sanity check only):</strong> ' + formatCurrency(roughTotal) + '</div>';
+}
+
+function initSettingsScreen() {
+  const loadBtn = document.getElementById('btnLoadDemo');
+  const clearBtn = document.getElementById('btnClearData');
+
+  if (loadBtn) {
+    loadBtn.addEventListener('click', function () {
+      loadDemoData();
+      renderDataSummary();
+      renderDashboard();
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      const confirmed = window.confirm('This will permanently delete all assets, custom institutions, and snapshots stored in this browser. Continue?');
+      if (!confirmed) return;
+      clearAllData();
+      renderDataSummary();
+      renderDashboard();
+    });
+  }
+
+  renderDataSummary();
+}
+
+/* ---------- 6b. DASHBOARD CALCULATIONS & RENDERING ----------
+   NOTE: getAssetCurrentValue() below is a BASIC estimate so the
+   Dashboard has real numbers to show. The full deterministic
+   calculation engine (separate function per product, e.g.
+   calculateFDMaturity) is built in Stage 6. For products that
+   don't have a live "current value" yet (FD, RD, Sovereign Bonds),
+   this uses the invested amount as a placeholder and flags it. */
+
+const TYPE_LABELS = {
+  savings: 'Savings Account',
+  shares: 'Shares',
+  mutual_fund: 'Mutual Funds',
+  fd: 'Fixed Deposit',
+  rd: 'Recurring Deposit',
+  epf: 'EPF',
+  ppf: 'PPF',
+  nps: 'NPS',
+  ssy: 'Sukanya Samriddhi',
+  lic: 'LIC',
+  bond: 'Sovereign Bonds',
+  gold: 'Gold',
+  silver: 'Silver',
+  other: 'Other'
+};
+
+const ALLOCATION_COLORS = [
+  '#146356', '#B98A2E', '#4B5C55', '#6E8F87', '#C77B4E',
+  '#3E6E8E', '#8E6E9A', '#A3752B', '#5C7A5A', '#8A5A4E',
+  '#5A7A8A', '#9A8A5A', '#7A5A8A', '#5A8A6E'
+];
+
+function gramsFromWeight(weight, unit) {
+  if (unit === 'kilograms') return weight * 1000;
+  if (unit === 'ounces') return weight * 31.1035;
+  return weight; // grams (default)
+}
+
+// Returns { value, isEstimate }. isEstimate = true means this
+// number is a stand-in (invested amount) until Stage 6's real
+// calculation engine can compute an actual current value.
+function getAssetCurrentValue(asset) {
+  switch (asset.type) {
+    case 'savings': return { value: asset.currentBalance || 0, isEstimate: false };
+    case 'shares': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'mutual_fund': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'epf': return { value: asset.currentValue || asset.currentBalance || 0, isEstimate: false };
+    case 'ppf': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'nps': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'ssy': return { value: asset.currentBalance || 0, isEstimate: false };
+    case 'lic': return { value: asset.currentValue || 0, isEstimate: !asset.currentValue };
+    case 'other': return { value: asset.currentValue || 0, isEstimate: false };
+    case 'fd': return { value: asset.investmentAmount || 0, isEstimate: true };
+    case 'rd': return { value: (asset.monthlyDeposit || 0) * (asset.tenureMonths || 0), isEstimate: true };
+    case 'bond': return { value: asset.investmentAmount || 0, isEstimate: true };
+    case 'gold':
+    case 'silver': {
+      const grams = gramsFromWeight(asset.weight || 0, asset.weightUnit);
+      return { value: grams * (asset.currentPrice || 0), isEstimate: false };
+    }
+    default: return { value: 0, isEstimate: true };
+  }
+}
+
+function renderDashboard() {
+  const totalEl = document.getElementById('totalCorpusValue');
+  if (!totalEl) return; // dashboard markup not present yet
+
+  const assets = loadData(STORAGE_KEYS.assets, []);
+
+  let totalCorpus = 0;
+  let hasEstimates = false;
+  const byType = {};        // type -> total value
+  const byInstitution = {}; // institution -> total value
+
+  assets.forEach(function (asset) {
+    const result = getAssetCurrentValue(asset);
+    totalCorpus += result.value;
+    if (result.isEstimate) hasEstimates = true;
+
+    byType[asset.type] = (byType[asset.type] || 0) + result.value;
+
+    const inst = asset.institution || 'Physical Holding';
+    byInstitution[inst] = (byInstitution[inst] || 0) + result.value;
+  });
+
+  // ---- Total corpus ----
+  totalEl.textContent = formatCurrency(totalCorpus);
+  const noteEl = document.getElementById('corpusIncompleteNote');
+  if (assets.length === 0) {
+    noteEl.textContent = 'No assets yet — load demo data or add your first asset to see your corpus.';
+  } else if (hasEstimates) {
+    noteEl.textContent = 'Corpus may be incomplete: FD, RD and Bond values shown are invested amounts until the maturity calculation engine is built (Stage 6).';
+  } else {
+    noteEl.textContent = '';
+  }
+
+  // ---- Asset allocation donut ----
+  renderAllocationDonut(byType, totalCorpus);
+
+  // ---- Corpus by institution ----
+  renderInstitutionList(byInstitution);
+}
+
+function renderAllocationDonut(byType, totalCorpus) {
+  const svg = document.getElementById('allocationDonut');
+  const legend = document.getElementById('allocationLegend');
+  if (!svg || !legend) return;
+
+  svg.innerHTML = '';
+  legend.innerHTML = '';
+
+  const types = Object.keys(byType).filter(function (t) { return byType[t] > 0; });
+
+  if (types.length === 0 || totalCorpus <= 0) {
+    legend.innerHTML = '<li class="allocation__empty-state">Add assets to see your allocation breakdown.</li>';
+    return;
+  }
+
+  const radius = 80;
+  const strokeWidth = 26;
+  const circumference = 2 * Math.PI * radius;
+  let offsetSoFar = 0;
+
+  types.forEach(function (type, index) {
+    const value = byType[type];
+    const fraction = value / totalCorpus;
+    const dash = fraction * circumference;
+    const color = ALLOCATION_COLORS[index % ALLOCATION_COLORS.length];
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '100');
+    circle.setAttribute('cy', '100');
+    circle.setAttribute('r', radius);
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', color);
+    circle.setAttribute('stroke-width', strokeWidth);
+    circle.setAttribute('stroke-dasharray', dash + ' ' + (circumference - dash));
+    circle.setAttribute('stroke-dashoffset', -offsetSoFar);
+    svg.appendChild(circle);
+
+    offsetSoFar += dash;
+
+    const li = document.createElement('li');
+    li.innerHTML =
+      '<span class="allocation__swatch" style="background:' + color + '"></span>' +
+      '<span class="allocation__legend-name">' + (TYPE_LABELS[type] || type) + '</span>' +
+      '<span class="allocation__legend-value">' + formatCurrency(value) + '</span>';
+    legend.appendChild(li);
+  });
+}
+
+function renderInstitutionList(byInstitution, sortDirection) {
+  const list = document.getElementById('institutionList');
+  if (!list) return;
+
+  const entries = Object.keys(byInstitution).map(function (name) {
+    return { name: name, value: byInstitution[name] };
+  });
+
+  entries.sort(function (a, b) {
+    return sortDirection === 'asc' ? a.value - b.value : b.value - a.value;
+  });
+
+  if (entries.length === 0) {
+    list.innerHTML = '<li class="allocation__empty-state">No institutions yet.</li>';
+    return;
+  }
+
+  const maxValue = Math.max.apply(null, entries.map(function (e) { return e.value; }));
+
+  list.innerHTML = entries.map(function (entry) {
+    const barPercent = maxValue > 0 ? Math.round((entry.value / maxValue) * 100) : 0;
+    return (
+      '<li>' +
+        '<span class="institution-list__name">' + entry.name + '</span>' +
+        '<span class="institution-list__value">' + formatCurrency(entry.value) + '</span>' +
+        '<span class="institution-list__bar-track"><span class="institution-list__bar-fill" style="width:' + barPercent + '%"></span></span>' +
+      '</li>'
+    );
+  }).join('');
+}
+
+function initDashboardSort() {
+  const sortBtn = document.getElementById('btnSortInstitutions');
+  if (!sortBtn) return;
+
+  let currentDirection = 'desc';
+
+  sortBtn.addEventListener('click', function () {
+    currentDirection = currentDirection === 'desc' ? 'asc' : 'desc';
+    sortBtn.textContent = currentDirection === 'desc' ? 'Highest → Lowest' : 'Lowest → Highest';
+
+    const assets = loadData(STORAGE_KEYS.assets, []);
+    const byInstitution = {};
+    assets.forEach(function (asset) {
+      const result = getAssetCurrentValue(asset);
+      const inst = asset.institution || 'Physical Holding';
+      byInstitution[inst] = (byInstitution[inst] || 0) + result.value;
+    });
+
+    renderInstitutionList(byInstitution, currentDirection);
+  });
+}
+
+/* ---------- 7. CALCULATION ENGINE (Stage 5) ----------
+   One deterministic function per financial product — never a
+   single generic formula reused everywhere. Every function returns
+   a plain number (rounded rupees) and never guesses: if it's
+   called, its caller has already checked the required inputs
+   exist. No AI, no randomness — same inputs always give the same
+   answer. */
+
+const COMPOUNDING_PERIODS_PER_YEAR = {
+  'Monthly': 12,
+  'Quarterly': 4,
+  'Half-Yearly': 2,
+  'Yearly': 1
+};
+
+// Fixed Deposit: standard compound interest, compounded at the
+// frequency the user picked.
+function calculateFDMaturity(principal, annualRatePercent, tenureMonths, compoundingFrequency) {
+  const n = COMPOUNDING_PERIODS_PER_YEAR[compoundingFrequency] || 4;
+  const r = annualRatePercent / 100;
+  const t = tenureMonths / 12;
+  const maturity = principal * Math.pow(1 + r / n, n * t);
+  return Math.round(maturity);
+}
+
+// Recurring Deposit: future value of a monthly annuity-due,
+// compounded monthly. Deliberately NOT the FD formula — an RD is a
+// stream of monthly deposits, not a single lump sum.
+function calculateRDMaturity(monthlyDeposit, annualRatePercent, tenureMonths) {
+  const r = annualRatePercent / 100 / 12; // monthly rate
+  if (r === 0) return Math.round(monthlyDeposit * tenureMonths);
+  const maturity = monthlyDeposit * ((Math.pow(1 + r, tenureMonths) - 1) / r) * (1 + r);
+  return Math.round(maturity);
+}
+
+// PPF: existing balance grows annually, PLUS a yearly contribution
+// annuity (deposits assumed made at the start of each PPF year, as
+// is standard practice for getting the full year's interest).
+function calculatePPFMaturity(currentValue, annualContribution, annualRatePercent, yearsRemaining) {
+  const r = annualRatePercent / 100;
+  const fvCurrent = currentValue * Math.pow(1 + r, yearsRemaining);
+  const fvContributions = r === 0
+    ? annualContribution * yearsRemaining
+    : annualContribution * ((Math.pow(1 + r, yearsRemaining) - 1) / r) * (1 + r);
+  return Math.round(fvCurrent + fvContributions);
+}
+
+// Sukanya Samriddhi Yojana: kept as its own function (not reused
+// from PPF) because SSY's contribution pattern and tenure rules
+// differ. This prototype grows the existing balance forward at the
+// given rate to the maturity date — it does not assume new deposits,
+// since the data model doesn't collect an ongoing annual SSY deposit.
+function calculateSSYMaturity(currentBalance, annualRatePercent, yearsRemaining) {
+  const r = annualRatePercent / 100;
+  const maturity = currentBalance * Math.pow(1 + r, yearsRemaining);
+  return Math.round(maturity);
+}
+
+// Sovereign Bonds: simple (non-compounded) annual interest on the
+// principal, paid out over the bond's tenure — the standard
+// structure for instruments like Sovereign Gold Bonds.
+function calculateBondMaturity(investmentAmount, annualRatePercent, tenureYears) {
+  const totalInterest = investmentAmount * (annualRatePercent / 100) * tenureYears;
+  return Math.round(investmentAmount + totalInterest);
+}
+
+// Shared helper: years between two ISO date strings (can be
+// fractional). Used to turn a maturity date into "years remaining"
+// for PPF/SSY/Bond calculations.
+function yearsBetweenDates(fromDateStr, toDateStr) {
+  const from = new Date(fromDateStr);
+  const to = new Date(toDateStr);
+  const msPerYear = 1000 * 60 * 60 * 24 * 365.25;
+  return (to - from) / msPerYear;
+}
+
+/* ---------- 8. ASSET FIELD CONFIGURATIONS (Stage 4) ----------
+   ONE config array per asset type — the form renderer below reads
+   this and builds the right fields automatically. To change what a
+   form asks for, edit the config here; nothing else needs to change. */
+
+const ASSET_TYPES = [
+  { id: 'savings', label: 'Savings Account', icon: '◆' },
+  { id: 'shares', label: 'Shares', icon: '▲' },
+  { id: 'mutual_fund', label: 'Mutual Funds', icon: '◍' },
+  { id: 'fd', label: 'Fixed Deposit', icon: '▣' },
+  { id: 'rd', label: 'Recurring Deposit', icon: '↻' },
+  { id: 'epf', label: 'EPF', icon: '⛁' },
+  { id: 'ppf', label: 'PPF', icon: '⛀' },
+  { id: 'nps', label: 'NPS', icon: '◉' },
+  { id: 'ssy', label: 'Sukanya Samriddhi', icon: '✦' },
+  { id: 'lic', label: 'LIC', icon: '⛨' },
+  { id: 'bond', label: 'Sovereign Bonds', icon: '◈' },
+  { id: 'gold', label: 'Gold - Physical', icon: '●' },
+  { id: 'silver', label: 'Silver - Physical', icon: '○' },
+  { id: 'other', label: 'Other', icon: '＋' }
+];
+
+const WEIGHT_UNIT_OPTIONS = ['grams', 'kilograms', 'ounces'];
+const COMPOUNDING_OPTIONS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
+const FREQUENCY_OPTIONS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
+const INVESTMENT_MODE_OPTIONS = ['One-Time', 'SIP'];
+const NPS_MODE_OPTIONS = ['One-Time', 'Monthly'];
+
+const ASSET_FIELD_CONFIGS = {
+  savings: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'accountNumber', label: 'Account / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'currentBalance', label: 'Current Balance (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'date', label: 'As Of Date', kind: 'date', required: true },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  shares: [
+    { key: 'institution', label: 'Institution / Broker', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'Account / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'company', label: 'Company', kind: 'text', required: true },
+    { key: 'quantity', label: 'Quantity', kind: 'number', required: true, min: 0 },
+    { key: 'purchasePrice', label: 'Purchase Price (₹ per share)', kind: 'number', required: true, min: 0 },
+    { key: 'purchaseDate', label: 'Purchase Date', kind: 'date', required: true },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  mutual_fund: [
+    { key: 'institution', label: 'Institution / AMC', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'Folio / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'fundName', label: 'Fund Name', kind: 'text', required: true },
+    { key: 'investmentMode', label: 'Investment Mode', kind: 'select', required: true, options: INVESTMENT_MODE_OPTIONS, default: 'One-Time' },
+    { key: 'investmentAmount', label: 'Investment Amount (₹)', kind: 'number', required: true, min: 0, showIf: { field: 'investmentMode', equals: 'One-Time' } },
+    { key: 'investmentDate', label: 'Investment Date', kind: 'date', required: true, showIf: { field: 'investmentMode', equals: 'One-Time' } },
+    { key: 'sipMonthlyAmount', label: 'Monthly SIP Amount (₹)', kind: 'number', required: true, min: 0, showIf: { field: 'investmentMode', equals: 'SIP' } },
+    { key: 'sipStartDate', label: 'SIP Start Date', kind: 'date', required: true, showIf: { field: 'investmentMode', equals: 'SIP' } },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  fd: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'FD / Receipt Number (optional)', kind: 'text', required: false },
+    { key: 'investmentAmount', label: 'Investment Amount (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date', kind: 'date', required: true },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'tenureMonths', label: 'Tenure (months)', kind: 'number', required: true, min: 1 },
+    { key: 'compounding', label: 'Compounding Frequency', kind: 'select', required: true, options: COMPOUNDING_OPTIONS },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'computed-date', required: false, hint: 'Calculated automatically from investment date + tenure.' },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  rd: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'RD Account / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'monthlyDeposit', label: 'Monthly Deposit (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'startDate', label: 'Start Date', kind: 'date', required: true },
+    { key: 'tenureMonths', label: 'Tenure (months)', kind: 'number', required: true, min: 1 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'computed-date', required: false, hint: 'Calculated automatically from start date + tenure.' },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  epf: [
+    { key: 'institution', label: 'Institution (EPFO / Trust)', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'UAN / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'currentBalance', label: 'Current Balance (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'contribution', label: 'Monthly Contribution (₹)', kind: 'number', required: false, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a., if known)', kind: 'number', required: false, min: 0, step: 0.01 },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  ppf: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'Account / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'openingDate', label: 'Opening Date', kind: 'date', required: true, hint: 'Fixed once set — this and the maturity date won\u2019t change as you log future deposits.' },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'contributions', label: 'Annual Contribution (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'computed-date', required: false, hint: 'Fixed automatically: 15 years from the opening date, per PPF rules.' },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  nps: [
+    { key: 'institution', label: 'Institution / Provider', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'PRAN / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'investmentMode', label: 'Contribution Mode', kind: 'select', required: true, options: NPS_MODE_OPTIONS, default: 'One-Time' },
+    { key: 'investmentAmount', label: 'One-Time Investment Amount (₹)', kind: 'number', required: true, min: 0, showIf: { field: 'investmentMode', equals: 'One-Time' } },
+    { key: 'monthlyContribution', label: 'Monthly Contribution (₹)', kind: 'number', required: true, min: 0, showIf: { field: 'investmentMode', equals: 'Monthly' } },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'investmentDate', label: 'Start Date', kind: 'date', required: true },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ],
+  ssy: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'Account / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'openingDate', label: 'Account Opening Date', kind: 'date', required: true, hint: 'Fixed once set — this and the maturity date won\u2019t change as you log future deposits.' },
+    { key: 'deposits', label: 'Total Deposits So Far (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'currentBalance', label: 'Current Balance (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'computed-date', required: false, hint: 'Fixed automatically: 21 years from account opening, per SSY rules.' },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  lic: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'policyName', label: 'Policy Name', kind: 'text', required: true },
+    { key: 'policyNumber', label: 'Policy Number / Reference (optional)', kind: 'text', required: false },
+    { key: 'premium', label: 'Premium (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'premiumFrequency', label: 'Premium Frequency', kind: 'select', required: true, options: FREQUENCY_OPTIONS },
+    { key: 'startDate', label: 'Policy Start Date', kind: 'date', required: true },
+    { key: 'policyTermYears', label: 'Policy Term (years)', kind: 'number', required: true, min: 1 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'computed-date', required: false, hint: 'Calculated automatically from policy start date + term.' },
+    { key: 'maturityValueEntered', label: 'Maturity Value (₹, if known)', kind: 'number', required: false, min: 0 },
+    { key: 'currentValue', label: 'Current Value (₹, if known)', kind: 'number', required: false, min: 0 }
+  ],
+  bond: [
+    { key: 'institution', label: 'Institution', kind: 'institution', required: true },
+    { key: 'accountReference', label: 'Certificate / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'bondName', label: 'Bond Name', kind: 'text', required: true },
+    { key: 'investmentAmount', label: 'Investment Amount (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date', kind: 'date', required: true },
+    { key: 'interestRate', label: 'Interest Rate (% p.a.)', kind: 'number', required: true, min: 0, step: 0.01 },
+    { key: 'tenureYears', label: 'Tenure (years)', kind: 'number', required: true, min: 1 },
+    { key: 'maturityDate', label: 'Maturity Date', kind: 'computed-date', required: false, hint: 'Calculated automatically from investment date + tenure.' },
+    { key: 'maturityValueEntered', label: 'Your Entered Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 }
+  ],
+  gold: [
+    { key: 'accountReference', label: 'Locker / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'weight', label: 'Weight', kind: 'number', required: true, min: 0 },
+    { key: 'weightUnit', label: 'Weight Unit', kind: 'select', required: true, options: WEIGHT_UNIT_OPTIONS, default: 'grams' },
+    { key: 'purchaseDate', label: 'Purchase Date', kind: 'date', required: true },
+    { key: 'purchasePrice', label: 'Purchase Price (₹ per unit)', kind: 'number', required: true, min: 0 },
+    { key: 'currentPrice', label: 'Current Market Price (₹ per unit)', kind: 'number', required: true, min: 0 }
+  ],
+  silver: [
+    { key: 'accountReference', label: 'Locker / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'weight', label: 'Weight', kind: 'number', required: true, min: 0 },
+    { key: 'weightUnit', label: 'Weight Unit', kind: 'select', required: true, options: WEIGHT_UNIT_OPTIONS, default: 'grams' },
+    { key: 'purchaseDate', label: 'Purchase Date', kind: 'date', required: true },
+    { key: 'purchasePrice', label: 'Purchase Price (₹ per unit)', kind: 'number', required: true, min: 0 },
+    { key: 'currentPrice', label: 'Current Market Price (₹ per unit)', kind: 'number', required: true, min: 0 }
+  ],
+  other: [
+    { key: 'institution', label: 'Institution (optional)', kind: 'institution', required: false },
+    { key: 'accountReference', label: 'Account / Reference Number (optional)', kind: 'text', required: false },
+    { key: 'assetName', label: 'Asset Name', kind: 'text', required: true },
+    { key: 'investmentAmount', label: 'Investment Amount (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'investmentDate', label: 'Investment Date (optional)', kind: 'date', required: false },
+    { key: 'currentValue', label: 'Current Value (₹)', kind: 'number', required: true, min: 0 },
+    { key: 'interestRate', label: 'Interest Rate (% p.a., optional)', kind: 'number', required: false, min: 0, step: 0.01 },
+    { key: 'maturityDate', label: 'Maturity Date (optional)', kind: 'date', required: false },
+    { key: 'maturityValueEntered', label: 'Maturity Value (₹, optional)', kind: 'number', required: false, min: 0 },
+    { key: 'notes', label: 'Notes', kind: 'textarea', required: false }
+  ]
+};
+
+// Which date field marks the "start" for each type — used to check
+// that a maturity date never falls before the asset's start date.
+const START_DATE_FIELD = {
+  fd: 'investmentDate', rd: 'startDate', ppf: 'openingDate',
+  ssy: 'openingDate', lic: 'startDate', bond: 'investmentDate'
+};
+
+/* ---------- 8b. AUTOMATIC MATURITY DATE RULES ----------
+   For every product where the tenure is known or fixed by law, the
+   maturity date is calculated — never typed in by hand — so it can
+   never drift or be entered inconsistently with the tenure. PPF and
+   SSY use their statutory lock-in periods; the rest use the tenure
+   the user entered. */
+
+function addMonthsToDate(dateStr, months) {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + Number(months));
+  return d.toISOString().slice(0, 10);
+}
+
+function addYearsToDate(dateStr, years) {
+  const d = new Date(dateStr);
+  d.setFullYear(d.getFullYear() + Number(years));
+  return d.toISOString().slice(0, 10);
+}
+
+const PPF_TENURE_YEARS = 15;
+const SSY_TENURE_YEARS = 21;
+
+const MATURITY_DATE_RULES = {
+  fd: function (v) { return (v.investmentDate && v.tenureMonths) ? addMonthsToDate(v.investmentDate, v.tenureMonths) : null; },
+  rd: function (v) { return (v.startDate && v.tenureMonths) ? addMonthsToDate(v.startDate, v.tenureMonths) : null; },
+  ppf: function (v) { return v.openingDate ? addYearsToDate(v.openingDate, PPF_TENURE_YEARS) : null; },
+  ssy: function (v) { return v.openingDate ? addYearsToDate(v.openingDate, SSY_TENURE_YEARS) : null; },
+  bond: function (v) { return (v.investmentDate && v.tenureYears) ? addYearsToDate(v.investmentDate, v.tenureYears) : null; },
+  lic: function (v) { return (v.startDate && v.policyTermYears) ? addYearsToDate(v.startDate, v.policyTermYears) : null; }
+};
+
+/* ---------- 9. ADD ASSET: FORM RENDERING ---------- */
+
+let selectedAssetType = null;
+
+function renderTypeGrid() {
+  const grid = document.getElementById('typeGrid');
+  if (!grid) return;
+
+  grid.innerHTML = ASSET_TYPES.map(function (t) {
+    return (
+      '<button type="button" class="type-btn" data-type="' + t.id + '">' +
+        '<span class="type-btn__icon">' + t.icon + '</span>' +
+        '<span>' + t.label + '</span>' +
+      '</button>'
+    );
+  }).join('');
+
+  grid.querySelectorAll('.type-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      selectAssetType(btn.dataset.type);
+    });
+  });
+}
+
+function refreshInstitutionOptions() {
+  const datalist = document.getElementById('institutionOptions');
+  if (!datalist) return;
+  datalist.innerHTML = getAllInstitutions().map(function (inst) {
+    return '<option value="' + inst.name + '">';
+  }).join('');
+}
+
+function buildFieldHTML(field) {
+  const id = 'field_' + field.key;
+  const requiredMark = field.required ? ' *' : '';
+  const hint = field.hint ? '<span class="hint">' + field.hint + '</span>' : '';
+
+  let inputHTML = '';
+
+  if (field.kind === 'institution') {
+    inputHTML = '<input type="text" id="' + id + '" list="institutionOptions" autocomplete="off">';
+  } else if (field.kind === 'text') {
+    inputHTML = '<input type="text" id="' + id + '">';
+  } else if (field.kind === 'number') {
+    const min = (field.min !== undefined) ? ' min="' + field.min + '"' : '';
+    const step = field.step ? ' step="' + field.step + '"' : ' step="any"';
+    inputHTML = '<input type="number" id="' + id + '"' + min + step + '>';
+  } else if (field.kind === 'date') {
+    inputHTML = '<input type="date" id="' + id + '">';
+  } else if (field.kind === 'computed-date') {
+    // Read-only: this value is calculated automatically, never typed.
+    inputHTML = '<input type="date" id="' + id + '" disabled>';
+  } else if (field.kind === 'select') {
+    const options = field.options.map(function (opt) {
+      const selectedAttr = (field.default === opt) ? ' selected' : '';
+      return '<option value="' + opt + '"' + selectedAttr + '>' + opt + '</option>';
+    }).join('');
+    inputHTML = '<select id="' + id + '">' + options + '</select>';
+  } else if (field.kind === 'textarea') {
+    inputHTML = '<textarea id="' + id + '"></textarea>';
+  }
+
+  return (
+    '<div class="form-group" id="fieldwrap_' + field.key + '">' +
+      '<label for="' + id + '">' + field.label + requiredMark + '</label>' +
+      inputHTML + hint +
+    '</div>'
+  );
+}
+
+// Whether a conditional field (e.g. SIP-only fields) should currently
+// be shown, based on the live value of the field that controls it.
+function isFieldVisible(field) {
+  if (!field.showIf) return true;
+  return getFieldValue(field.showIf.field) === field.showIf.equals;
+}
+
+// Runs on every keystroke/change in the form: shows/hides conditional
+// fields (One-Time vs SIP, One-Time vs Monthly), recalculates any
+// automatic maturity date, and refreshes the live maturity-value
+// preview — all three depend on the same live field values.
+function refreshDynamicFormState(typeId) {
+  const fields = ASSET_FIELD_CONFIGS[typeId];
+
+  fields.forEach(function (field) {
+    if (!field.showIf) return;
+    const wrap = document.getElementById('fieldwrap_' + field.key);
+    if (wrap) wrap.style.display = isFieldVisible(field) ? 'block' : 'none';
+  });
+
+  if (MATURITY_DATE_RULES[typeId]) {
+    const values = {};
+    fields.forEach(function (f) { values[f.key] = getFieldValue(f.key); });
+    const computed = MATURITY_DATE_RULES[typeId](values);
+    const maturityInput = document.getElementById('field_maturityDate');
+    if (maturityInput) maturityInput.value = computed || '';
+  }
+
+  if (CALC_PREVIEW_FNS[typeId]) updateCalcPreview(typeId);
+}
+
+function selectAssetType(typeId) {
+  selectedAssetType = typeId;
+
+  document.querySelectorAll('.type-btn').forEach(function (btn) {
+    btn.classList.toggle('is-selected', btn.dataset.type === typeId);
+  });
+
+  const typeMeta = ASSET_TYPES.find(function (t) { return t.id === typeId; });
+  document.getElementById('formTitle').textContent = '2. Enter ' + typeMeta.label + ' Details';
+
+  const fields = ASSET_FIELD_CONFIGS[typeId];
+  document.getElementById('dynamicFields').innerHTML = fields.map(buildFieldHTML).join('');
+
+  document.getElementById('formCard').style.display = 'block';
+  document.getElementById('formErrors').style.display = 'none';
+  document.getElementById('successBanner').style.display = 'none';
+  document.getElementById('assetForm').style.display = 'block';
+
+  refreshInstitutionOptions();
+
+  const previewBox = document.getElementById('calcPreview');
+  previewBox.style.display = CALC_PREVIEW_FNS[typeId] ? 'block' : 'none';
+
+  refreshDynamicFormState(typeId);
+}
+
+/* ---------- 10. ADD ASSET: LIVE MATURITY PREVIEW ---------- */
+
+function getFieldValue(key) {
+  const el = document.getElementById('field_' + key);
+  return el ? el.value : '';
+}
+
+function computeFDPreview() {
+  const investmentAmount = Number(getFieldValue('investmentAmount'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const tenureMonths = Number(getFieldValue('tenureMonths'));
+  const compounding = getFieldValue('compounding');
+
+  if (!investmentAmount || !interestRate || !tenureMonths || !compounding) {
+    return { value: null, message: 'Add investment amount, interest rate, tenure and compounding frequency to calculate estimated maturity value.' };
+  }
+  return { value: calculateFDMaturity(investmentAmount, interestRate, tenureMonths, compounding), message: null };
+}
+
+function computeRDPreview() {
+  const monthlyDeposit = Number(getFieldValue('monthlyDeposit'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const tenureMonths = Number(getFieldValue('tenureMonths'));
+
+  if (!monthlyDeposit || !interestRate || !tenureMonths) {
+    return { value: null, message: 'Add monthly deposit, interest rate and tenure to calculate estimated maturity value.' };
+  }
+  return { value: calculateRDMaturity(monthlyDeposit, interestRate, tenureMonths), message: null };
+}
+
+function computePPFPreview() {
+  const currentValue = Number(getFieldValue('currentValue'));
+  const contributions = Number(getFieldValue('contributions')) || 0;
+  const interestRate = Number(getFieldValue('interestRate'));
+  const maturityDate = getFieldValue('maturityDate');
+
+  if (!currentValue || !interestRate || !maturityDate) {
+    return { value: null, message: 'Add current value, interest rate and maturity date to calculate estimated maturity value.' };
+  }
+  const yearsRemaining = yearsBetweenDates(new Date().toISOString().slice(0, 10), maturityDate);
+  if (yearsRemaining <= 0) {
+    return { value: null, message: 'Maturity date should be in the future to estimate a maturity value.' };
+  }
+  return { value: calculatePPFMaturity(currentValue, contributions, interestRate, yearsRemaining), message: null };
+}
+
+function computeSSYPreview() {
+  const currentBalance = Number(getFieldValue('currentBalance'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const maturityDate = getFieldValue('maturityDate');
+
+  if (!currentBalance || !interestRate || !maturityDate) {
+    return { value: null, message: 'Add current balance, interest rate and maturity date to calculate estimated maturity value.' };
+  }
+  const yearsRemaining = yearsBetweenDates(new Date().toISOString().slice(0, 10), maturityDate);
+  if (yearsRemaining <= 0) {
+    return { value: null, message: 'Maturity date should be in the future to estimate a maturity value.' };
+  }
+  return { value: calculateSSYMaturity(currentBalance, interestRate, yearsRemaining), message: null };
+}
+
+function computeBondPreview() {
+  const investmentAmount = Number(getFieldValue('investmentAmount'));
+  const interestRate = Number(getFieldValue('interestRate'));
+  const investmentDate = getFieldValue('investmentDate');
+  const maturityDate = getFieldValue('maturityDate');
+
+  if (!investmentAmount || !interestRate || !investmentDate || !maturityDate) {
+    return { value: null, message: 'Add investment amount, interest rate, investment date and maturity date to calculate estimated maturity value.' };
+  }
+  const tenureYears = yearsBetweenDates(investmentDate, maturityDate);
+  if (tenureYears <= 0) {
+    return { value: null, message: 'Maturity date should be after the investment date to estimate a maturity value.' };
+  }
+  return { value: calculateBondMaturity(investmentAmount, interestRate, tenureYears), message: null };
+}
+
+const CALC_PREVIEW_FNS = {
+  fd: computeFDPreview,
+  rd: computeRDPreview,
+  ppf: computePPFPreview,
+  ssy: computeSSYPreview,
+  bond: computeBondPreview
+};
+
+function updateCalcPreview(typeId) {
+  const box = document.getElementById('calcPreview');
+  const fn = CALC_PREVIEW_FNS[typeId];
+  if (!box || !fn) return;
+
+  const result = fn();
+
+  if (result.value === null) {
+    box.innerHTML = result.message;
+    return;
+  }
+
+  let html = 'Estimated Maturity Value<span class="calc-preview__value">' + formatCurrency(result.value) + '</span>';
+
+  const enteredRaw = getFieldValue('maturityValueEntered');
+  if (enteredRaw) {
+    const entered = Number(enteredRaw);
+    const diffFraction = Math.abs(entered - result.value) / result.value;
+    if (diffFraction > 0.01) {
+      html += '<div class="calc-preview__diff-note">Calculated maturity value differs from your entered value.</div>';
+    }
+  }
+
+  box.innerHTML = html;
+}
+
+/* ---------- 11. ADD ASSET: VALIDATION & SAVE ---------- */
+
+function validateAssetForm(typeId, fields) {
+  const errors = [];
+  const values = {};
+
+  fields.forEach(function (field) {
+    const raw = getFieldValue(field.key);
+    values[field.key] = raw;
+
+    // Fields hidden by a showIf condition (e.g. SIP fields while
+    // "One-Time" is selected) aren't validated — they're not
+    // relevant to what the user is actually filling in right now.
+    if (!isFieldVisible(field)) return;
+
+    // Computed-date fields are filled in automatically, never typed,
+    // so they're never checked as "required" here.
+    if (field.kind === 'computed-date') return;
+
+    if (field.required && !raw) {
+      errors.push('Please enter ' + field.label.replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\*$/, '') + '.');
+      return;
+    }
+
+    if (field.kind === 'number' && raw !== '') {
+      const num = Number(raw);
+      if (field.min !== undefined && num < field.min) {
+        errors.push(field.label.replace(/\s*\(.*?\)\s*/g, '') + ' cannot be negative.');
+      }
+    }
+  });
+
+  // Maturity date should not be before the asset's start date.
+  const startKey = START_DATE_FIELD[typeId];
+  if (startKey && values[startKey] && values.maturityDate) {
+    if (new Date(values.maturityDate) < new Date(values[startKey])) {
+      errors.push('Maturity Date should not be before the investment/start date.');
+    }
+  }
+
+  return { errors: errors, values: values };
+}
+
+function saveAssetForm(event) {
+  event.preventDefault();
+  if (!selectedAssetType) return;
+
+  const fields = ASSET_FIELD_CONFIGS[selectedAssetType];
+  const { errors, values } = validateAssetForm(selectedAssetType, fields);
+
+  const errorBox = document.getElementById('formErrors');
+  if (errors.length > 0) {
+    errorBox.innerHTML = errors.map(function (e) { return '<li>' + e + '</li>'; }).join('');
+    errorBox.style.display = 'block';
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  errorBox.style.display = 'none';
+
+  // Build the asset object: numbers parsed as numbers, blanks as
+  // null (never guessed), text kept as-is.
+  const isEditing = !!editingAssetId;
+  const asset = isEditing
+    ? { id: editingAssetId, type: selectedAssetType }
+    : { id: generateId(), type: selectedAssetType, createdAt: new Date().toISOString() };
+
+  fields.forEach(function (field) {
+    // A field hidden because its showIf condition doesn't match
+    // (e.g. leftover SIP amount after switching back to One-Time)
+    // is never saved — only what's actually visible and relevant.
+    if (!isFieldVisible(field)) {
+      asset[field.key] = null;
+      return;
+    }
+    const raw = values[field.key];
+    if (field.kind === 'number') {
+      asset[field.key] = raw === '' ? null : Number(raw);
+    } else {
+      asset[field.key] = raw === '' ? null : raw;
+    }
+  });
+
+  if (isEditing) asset.updatedAt = new Date().toISOString();
+
+  // If a live-calculated maturity value exists for this type, store
+  // it alongside the user's entered value — never overwrite one
+  // with the other.
+  if (CALC_PREVIEW_FNS[selectedAssetType]) {
+    const calc = CALC_PREVIEW_FNS[selectedAssetType]();
+    asset.maturityValueCalculated = calc.value;
+  }
+
+  // A typed institution that isn't in the master list yet gets
+  // saved as a custom institution for next time.
+  if (asset.institution) {
+    const exists = getAllInstitutions().some(function (inst) {
+      return inst.name.toLowerCase() === asset.institution.toLowerCase();
+    });
+    if (!exists) addCustomInstitution(asset.institution);
+  }
+
+  updateData(STORAGE_KEYS.assets, [], function (list) {
+    if (isEditing) {
+      const original = list.find(function (a) { return a.id === editingAssetId; });
+      asset.createdAt = original ? original.createdAt : new Date().toISOString();
+      return list.map(function (a) { return a.id === editingAssetId ? asset : a; });
+    }
+    list.push(asset);
+    return list;
+  });
+
+  const typeMeta = ASSET_TYPES.find(function (t) { return t.id === selectedAssetType; });
+  document.getElementById('successAssetLabel').textContent = typeMeta.label + (isEditing ? ' (updated)' : '');
+  document.getElementById('assetForm').style.display = 'none';
+  document.getElementById('successBanner').style.display = 'block';
+
+  editingAssetId = null;
+  document.getElementById('editModeNote').style.display = 'none';
+
+  refreshInstitutionOptions();
+  renderDashboard();
+  renderAssetsList();
+  renderMaturityCalendar();
+}
+
+function resetAddAssetScreen() {
+  const wasEditing = !!editingAssetId;
+
+  selectedAssetType = null;
+  editingAssetId = null;
+  document.querySelectorAll('.type-btn').forEach(function (btn) {
+    btn.classList.remove('is-selected');
+  });
+  document.getElementById('typePickerCard').style.display = 'block';
+  document.getElementById('editModeNote').style.display = 'none';
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('assetForm').style.display = 'block';
+  document.getElementById('successBanner').style.display = 'none';
+  document.getElementById('formErrors').style.display = 'none';
+  document.getElementById('btnSubmitAsset').textContent = 'Save Asset';
+
+  // Cancelling an edit goes back to the list; cancelling a fresh
+  // add just clears the form so you can pick a different type.
+  if (wasEditing) navigateToScreen('my-assets');
+}
+
+function initAddAssetScreen() {
+  renderTypeGrid();
+  refreshInstitutionOptions();
+
+  const form = document.getElementById('assetForm');
+  if (form) form.addEventListener('submit', saveAssetForm);
+
+  const cancelBtn = document.getElementById('btnCancelAdd');
+  if (cancelBtn) cancelBtn.addEventListener('click', resetAddAssetScreen);
+
+  const addAnotherBtn = document.getElementById('btnAddAnother');
+  if (addAnotherBtn) addAnotherBtn.addEventListener('click', resetAddAssetScreen);
+
+  // ONE delegated listener for the whole app's lifetime, instead of
+  // re-attaching a new one every time a type is picked — it always
+  // reads the current selectedAssetType, so nothing stacks up.
+  // Listens for both "input" (typing) and "change" (dropdowns) so
+  // switching One-Time/SIP always refreshes the form immediately.
+  const dynamicFields = document.getElementById('dynamicFields');
+  if (dynamicFields) {
+    const handleFieldChange = function () {
+      if (selectedAssetType) refreshDynamicFormState(selectedAssetType);
+    };
+    dynamicFields.addEventListener('input', handleFieldChange);
+    dynamicFields.addEventListener('change', handleFieldChange);
+  }
+}
+
+/* ---------- 12. SHARED ASSET DISPLAY HELPERS ----------
+   Used by both My Assets (Stage 6) and Maturity Calendar (Stage 7)
+   so the two screens describe an asset the same way. */
+
+function getAssetDisplayName(asset) {
+  return asset.company || asset.fundName || asset.policyName ||
+    asset.bondName || asset.assetName || (TYPE_LABELS[asset.type] || asset.type);
+}
+
+function getAssetInvestedAmount(asset) {
+  switch (asset.type) {
+    case 'shares': return (asset.quantity || 0) * (asset.purchasePrice || 0);
+    case 'mutual_fund': {
+      if (asset.investmentMode === 'SIP') {
+        if (!asset.sipMonthlyAmount || !asset.sipStartDate) return null;
+        const monthsElapsed = Math.max(0, Math.round(yearsBetweenDates(asset.sipStartDate, new Date().toISOString().slice(0, 10)) * 12));
+        return asset.sipMonthlyAmount * monthsElapsed;
+      }
+      return asset.investmentAmount;
+    }
+    case 'fd': return asset.investmentAmount;
+    case 'rd': return (asset.monthlyDeposit || 0) * (asset.tenureMonths || 0);
+    case 'ssy': return asset.deposits;
+    case 'bond': return asset.investmentAmount;
+    case 'other': return asset.investmentAmount;
+    case 'gold':
+    case 'silver': {
+      const grams = gramsFromWeight(asset.weight || 0, asset.weightUnit);
+      return grams * (asset.purchasePrice || 0);
+    }
+    default: return null;
+  }
+}
+
+// Prefers the deterministically-calculated maturity value (stored
+// at save time); falls back to what the user typed in themselves.
+// Never invents a number if neither exists.
+function getAssetMaturityValue(asset) {
+  if (asset.maturityValueCalculated !== undefined && asset.maturityValueCalculated !== null) {
+    return asset.maturityValueCalculated;
+  }
+  if (asset.maturityValueEntered !== undefined && asset.maturityValueEntered !== null) {
+    return asset.maturityValueEntered;
+  }
+  return null;
+}
+
+function searchableText(asset) {
+  return [
+    asset.institution, asset.company, asset.fundName, asset.policyName,
+    asset.policyNumber, asset.bondName, asset.assetName,
+    asset.accountNumber, asset.accountReference, asset.notes
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+/* ---------- 13. MY ASSETS: LIST, SEARCH, FILTER, SORT (Stage 6) ---------- */
+
+function populateAssetTypeFilter() {
+  const select = document.getElementById('assetTypeFilter');
+  if (!select) return;
+  select.innerHTML = '<option value="all">All Asset Types</option>' +
+    ASSET_TYPES.map(function (t) { return '<option value="' + t.id + '">' + t.label + '</option>'; }).join('');
+}
+
+function renderAssetsList() {
+  const wrap = document.getElementById('assetsListWrap');
+  const emptyState = document.getElementById('assetsEmptyState');
+  if (!wrap) return;
+
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const searchTerm = (document.getElementById('assetSearch').value || '').toLowerCase();
+  const typeFilter = document.getElementById('assetTypeFilter').value;
+  const sortMode = document.getElementById('assetSort').value;
+
+  let filtered = assets.filter(function (asset) {
+    const matchesType = typeFilter === 'all' || asset.type === typeFilter;
+    const matchesSearch = !searchTerm || searchableText(asset).includes(searchTerm);
+    return matchesType && matchesSearch;
+  });
+
+  filtered.forEach(function (asset) {
+    asset._currentValue = getAssetCurrentValue(asset).value;
+  });
+
+  if (sortMode === 'value-desc') filtered.sort(function (a, b) { return b._currentValue - a._currentValue; });
+  else if (sortMode === 'value-asc') filtered.sort(function (a, b) { return a._currentValue - b._currentValue; });
+  else if (sortMode === 'institution-asc') filtered.sort(function (a, b) { return (a.institution || '').localeCompare(b.institution || ''); });
+  else if (sortMode === 'maturity-asc') {
+    filtered.sort(function (a, b) {
+      if (!a.maturityDate) return 1;
+      if (!b.maturityDate) return -1;
+      return new Date(a.maturityDate) - new Date(b.maturityDate);
+    });
+  }
+
+  if (filtered.length === 0) {
+    wrap.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  wrap.innerHTML = filtered.map(function (asset) {
+    const invested = getAssetInvestedAmount(asset);
+    const maturityValue = getAssetMaturityValue(asset);
+    return (
+      '<div class="asset-row" data-asset-id="' + asset.id + '">' +
+        '<div>' +
+          '<div class="asset-row__type">' + (TYPE_LABELS[asset.type] || asset.type) + ' — ' + getAssetDisplayName(asset) + '</div>' +
+          '<div class="asset-row__institution">' + (asset.institution || 'Physical Holding') + '</div>' +
+        '</div>' +
+        '<div><span class="asset-row__col-label">Invested</span><span class="asset-row__value">' + (invested !== null && invested !== undefined ? formatCurrency(invested) : '—') + '</span></div>' +
+        '<div><span class="asset-row__col-label">Current Value</span><span class="asset-row__value">' + formatCurrency(asset._currentValue) + '</span></div>' +
+        '<div><span class="asset-row__col-label">Maturity Date</span><span class="asset-row__value">' + (asset.maturityDate || '—') + '</span></div>' +
+        '<div><span class="asset-row__col-label">Maturity Value</span><span class="asset-row__value">' + (maturityValue !== null ? formatCurrency(maturityValue) : '—') + '</span></div>' +
+      '</div>'
+    );
+  }).join('');
+
+  wrap.querySelectorAll('.asset-row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      openAssetDetail(row.dataset.assetId);
+    });
+  });
+}
+
+function initMyAssetsScreen() {
+  populateAssetTypeFilter();
+
+  const searchInput = document.getElementById('assetSearch');
+  const typeFilter = document.getElementById('assetTypeFilter');
+  const sortSelect = document.getElementById('assetSort');
+
+  if (searchInput) searchInput.addEventListener('input', renderAssetsList);
+  if (typeFilter) typeFilter.addEventListener('change', renderAssetsList);
+  if (sortSelect) sortSelect.addEventListener('change', renderAssetsList);
+}
+
+/* ---------- 14. ASSET DETAIL MODAL (view / edit / delete) ---------- */
+
+let activeModalAssetId = null;
+
+function buildAssetDetailHTML(asset) {
+  const fields = ASSET_FIELD_CONFIGS[asset.type];
+  const rows = [];
+
+  rows.push('<div class="modal-detail__row"><span class="modal-detail__label">Asset Type</span><span class="modal-detail__value">' + (TYPE_LABELS[asset.type] || asset.type) + '</span></div>');
+  rows.push('<div class="modal-detail__row"><span class="modal-detail__label">Current Value</span><span class="modal-detail__value">' + formatCurrency(getAssetCurrentValue(asset).value) + '</span></div>');
+
+  const maturityValue = getAssetMaturityValue(asset);
+  if (maturityValue !== null) {
+    rows.push('<div class="modal-detail__row"><span class="modal-detail__label">Maturity Value</span><span class="modal-detail__value">' + formatCurrency(maturityValue) + '</span></div>');
+  }
+
+  fields.forEach(function (field) {
+    if (field.key === 'maturityValueEntered' || field.key === 'currentValue') return; // already summarized above
+    const value = asset[field.key];
+    if (value === null || value === undefined || value === '') return;
+    const label = field.label.replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\*$/, '');
+    rows.push('<div class="modal-detail__row"><span class="modal-detail__label">' + label + '</span><span class="modal-detail__value">' + value + '</span></div>');
+  });
+
+  return (
+    '<h2 class="modal-detail__headline">' + getAssetDisplayName(asset) + '</h2>' +
+    rows.join('')
+  );
+}
+
+function openAssetDetail(assetId) {
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const asset = assets.find(function (a) { return a.id === assetId; });
+  if (!asset) return;
+
+  activeModalAssetId = assetId;
+  document.getElementById('modalContent').innerHTML = buildAssetDetailHTML(asset);
+  document.getElementById('assetDetailModal').style.display = 'flex';
+}
+
+function closeAssetDetail() {
+  activeModalAssetId = null;
+  document.getElementById('assetDetailModal').style.display = 'none';
+}
+
+function deleteAssetById(assetId) {
+  updateData(STORAGE_KEYS.assets, [], function (list) {
+    return list.filter(function (a) { return a.id !== assetId; });
+  });
+}
+
+function initAssetDetailModal() {
+  const overlay = document.getElementById('assetDetailModal');
+  const closeBtn = document.getElementById('btnCloseModal');
+  const editBtn = document.getElementById('btnEditAsset');
+  const deleteBtn = document.getElementById('btnDeleteAsset');
+
+  if (closeBtn) closeBtn.addEventListener('click', closeAssetDetail);
+
+  // Clicking the dark backdrop (not the card itself) also closes it.
+  if (overlay) {
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) closeAssetDetail();
+    });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function () {
+      if (!activeModalAssetId) return;
+      const confirmed = window.confirm('Delete this asset permanently? This cannot be undone.');
+      if (!confirmed) return;
+      deleteAssetById(activeModalAssetId);
+      closeAssetDetail();
+      renderAssetsList();
+      renderDashboard();
+      renderMaturityCalendar();
+    });
+  }
+
+  if (editBtn) {
+    editBtn.addEventListener('click', function () {
+      if (!activeModalAssetId) return;
+      const assetId = activeModalAssetId;
+      closeAssetDetail();
+      navigateToScreen('add-asset');
+      loadAssetForEditing(assetId);
+    });
+  }
+}
+
+/* ---------- 15. EDIT ASSET FLOW ---------- */
+
+let editingAssetId = null;
+
+function loadAssetForEditing(assetId) {
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const asset = assets.find(function (a) { return a.id === assetId; });
+  if (!asset) return;
+
+  editingAssetId = assetId;
+  selectAssetType(asset.type);
+
+  const fields = ASSET_FIELD_CONFIGS[asset.type];
+  fields.forEach(function (field) {
+    const el = document.getElementById('field_' + field.key);
+    if (el && asset[field.key] !== null && asset[field.key] !== undefined) {
+      el.value = asset[field.key];
+    }
+  });
+
+  refreshDynamicFormState(asset.type);
+
+  document.getElementById('typePickerCard').style.display = 'none';
+  document.getElementById('editModeNote').style.display = 'block';
+  document.getElementById('formTitle').textContent = 'Edit ' + (TYPE_LABELS[asset.type] || asset.type) + ' Details';
+  document.getElementById('btnSubmitAsset').textContent = 'Update Asset';
+}
+
+/* ---------- 16. MATURITY CALENDAR (Stage 7) ---------- */
+
+const MATURITY_SECTIONS = [
+  { key: 'matured', title: 'Matured' },
+  { key: 'this-month', title: 'Maturing This Month' },
+  { key: 'next-3', title: 'Next 3 Months' },
+  { key: 'next-6', title: 'Next 6 Months' },
+  { key: 'next-12', title: 'Next 12 Months' },
+  { key: 'later', title: 'Later' }
+];
+
+function getMaturityInfo(asset) {
+  if (!asset.maturityDate) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const maturityDate = new Date(asset.maturityDate);
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysRemaining = Math.round((maturityDate - today) / msPerDay);
+
+  let sectionKey, statusClass, statusLabel;
+  if (daysRemaining < 0) {
+    sectionKey = 'matured'; statusClass = 'matured'; statusLabel = 'Matured';
+  } else if (daysRemaining <= 30) {
+    sectionKey = 'this-month'; statusClass = 'due-soon'; statusLabel = 'Due Soon';
+  } else if (daysRemaining <= 90) {
+    sectionKey = 'next-3'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  } else if (daysRemaining <= 180) {
+    sectionKey = 'next-6'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  } else if (daysRemaining <= 365) {
+    sectionKey = 'next-12'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  } else {
+    sectionKey = 'later'; statusClass = 'upcoming'; statusLabel = 'Upcoming';
+  }
+
+  return { daysRemaining: daysRemaining, sectionKey: sectionKey, statusClass: statusClass, statusLabel: statusLabel };
+}
+
+function renderMaturityCalendar() {
+  const wrap = document.getElementById('maturityCalendarWrap');
+  const emptyState = document.getElementById('maturityEmptyState');
+  if (!wrap) return;
+
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const withMaturity = assets
+    .map(function (asset) { return { asset: asset, info: getMaturityInfo(asset) }; })
+    .filter(function (item) { return item.info !== null; });
+
+  if (withMaturity.length === 0) {
+    wrap.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  const html = MATURITY_SECTIONS.map(function (section) {
+    const items = withMaturity
+      .filter(function (item) { return item.info.sectionKey === section.key; })
+      .sort(function (a, b) { return a.info.daysRemaining - b.info.daysRemaining; });
+
+    if (items.length === 0) return '';
+
+    const rows = items.map(function (item) {
+      const asset = item.asset;
+      const info = item.info;
+      const invested = getAssetInvestedAmount(asset);
+      const maturityValue = getAssetMaturityValue(asset);
+      const daysLabel = info.daysRemaining < 0
+        ? Math.abs(info.daysRemaining) + ' days ago'
+        : info.daysRemaining + ' days';
+
+      return (
+        '<div class="maturity-row maturity-row--' + info.statusClass + '" data-asset-id="' + asset.id + '">' +
+          '<div>' +
+            '<div class="asset-row__type">' + (TYPE_LABELS[asset.type] || asset.type) + ' — ' + getAssetDisplayName(asset) + '</div>' +
+          '</div>' +
+          '<div><span class="maturity-row__col-label">Institution</span>' + (asset.institution || '—') + '</div>' +
+          '<div><span class="maturity-row__col-label">Invested</span>' + (invested !== null && invested !== undefined ? formatCurrency(invested) : '—') + '</div>' +
+          '<div><span class="maturity-row__col-label">Maturity Date</span>' + asset.maturityDate + '</div>' +
+          '<div><span class="asset-row__maturity-badge badge--' + info.statusClass + '">' + daysLabel + '</span></div>' +
+          '<div><span class="maturity-row__col-label">Maturity Value</span>' + (maturityValue !== null ? formatCurrency(maturityValue) : '—') + '</div>' +
+        '</div>'
+      );
+    }).join('');
+
+    return (
+      '<div class="maturity-section">' +
+        '<h2 class="maturity-section__title">' + section.title + ' (' + items.length + ')</h2>' +
+        rows +
+      '</div>'
+    );
+  }).join('');
+
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('.maturity-row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      openAssetDetail(row.dataset.assetId);
+    });
+  });
+}
+
+/* ---------- 17. CORPUS HISTORY (Stage 8) ---------- */
+
+// The dates called out in the product brief, plus "Today" — one
+// tap fills the date field instead of typing it.
+function getQuickDates() {
+  const today = new Date().toISOString().slice(0, 10);
+  return [
+    { label: '31 Mar 2024', date: '2024-03-31' },
+    { label: '31 Mar 2025', date: '2025-03-31' },
+    { label: '31 Mar 2026', date: '2026-03-31' },
+    { label: 'Today', date: today }
+  ];
+}
+
+function renderQuickDateButtons() {
+  const wrap = document.getElementById('quickDates');
+  if (!wrap) return;
+  wrap.innerHTML = getQuickDates().map(function (q) {
+    return '<button type="button" class="quick-date-btn" data-date="' + q.date + '">' + q.label + '</button>';
+  }).join('');
+
+  wrap.querySelectorAll('.quick-date-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.getElementById('snapshotDate').value = btn.dataset.date;
+    });
+  });
+}
+
+// Total corpus computed fresh from the CURRENT assets — this is
+// what gets locked into a snapshot at the moment you take it.
+function computeCurrentTotalCorpus() {
+  const assets = loadData(STORAGE_KEYS.assets, []);
+  const assetValues = {};
+  let total = 0;
+  assets.forEach(function (asset) {
+    const value = getAssetCurrentValue(asset).value;
+    assetValues[asset.id] = value;
+    total += value;
+  });
+  return { total: total, assetValues: assetValues };
+}
+
+function takeSnapshot() {
+  const dateInput = document.getElementById('snapshotDate');
+  const date = dateInput.value;
+  const confirmEl = document.getElementById('snapshotConfirm');
+
+  if (!date) {
+    confirmEl.textContent = 'Please choose a date first.';
+    confirmEl.style.display = 'block';
+    return;
+  }
+
+  const { total, assetValues } = computeCurrentTotalCorpus();
+
+  updateData(STORAGE_KEYS.snapshots, [], function (list) {
+    const existingIndex = list.findIndex(function (s) { return s.date === date; });
+    const snapshot = { id: existingIndex >= 0 ? list[existingIndex].id : generateId(), date: date, totalCorpus: total, assetValues: assetValues };
+    if (existingIndex >= 0) {
+      list[existingIndex] = snapshot;
+    } else {
+      list.push(snapshot);
+    }
+    return list;
+  });
+
+  confirmEl.textContent = 'Snapshot saved for ' + date + ': ' + formatCurrency(total);
+  confirmEl.style.display = 'block';
+
+  renderSnapshotList();
+  renderGrowthChart();
+}
+
+function renderSnapshotList() {
+  const list = document.getElementById('snapshotList');
+  if (!list) return;
+
+  const snapshots = loadData(STORAGE_KEYS.snapshots, []).slice().sort(function (a, b) {
+    return new Date(b.date) - new Date(a.date);
+  });
+
+  if (snapshots.length === 0) {
+    list.innerHTML = '<li class="allocation__empty-state">No snapshots yet — take your first one above.</li>';
+    return;
+  }
+
+  list.innerHTML = snapshots.map(function (s) {
+    return (
+      '<li>' +
+        '<span class="snapshot-list__date">' + s.date + '</span>' +
+        '<span class="snapshot-list__value">' + formatCurrency(s.totalCorpus) + '</span>' +
+        '<button type="button" class="snapshot-list__delete" data-snapshot-id="' + s.id + '" aria-label="Delete snapshot">×</button>' +
+      '</li>'
+    );
+  }).join('');
+
+  list.querySelectorAll('.snapshot-list__delete').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const confirmed = window.confirm('Delete this snapshot?');
+      if (!confirmed) return;
+      updateData(STORAGE_KEYS.snapshots, [], function (arr) {
+        return arr.filter(function (s) { return s.id !== btn.dataset.snapshotId; });
+      });
+      renderSnapshotList();
+      renderGrowthChart();
+    });
+  });
+}
+
+function renderGrowthChart() {
+  const wrap = document.getElementById('growthChartWrap');
+  if (!wrap) return;
+
+  const snapshots = loadData(STORAGE_KEYS.snapshots, []).slice().sort(function (a, b) {
+    return new Date(a.date) - new Date(b.date);
+  });
+
+  if (snapshots.length < 2) {
+    wrap.innerHTML = '<p class="allocation__empty-state">Take at least 2 snapshots (on different dates) to see a growth chart.</p>';
+    return;
+  }
+
+  const width = 600, height = 220, padding = 36;
+  const values = snapshots.map(function (s) { return s.totalCorpus; });
+  const maxValue = Math.max.apply(null, values) * 1.1 || 1;
+  const minValue = 0;
+
+  const stepX = (width - padding * 2) / (snapshots.length - 1);
+
+  const points = snapshots.map(function (s, i) {
+    const x = padding + i * stepX;
+    const y = height - padding - ((s.totalCorpus - minValue) / (maxValue - minValue)) * (height - padding * 2);
+    return { x: x, y: y, snapshot: s };
+  });
+
+  const linePath = points.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p.x + ',' + p.y; }).join(' ');
+  const areaPath = linePath + ' L' + points[points.length - 1].x + ',' + (height - padding) + ' L' + points[0].x + ',' + (height - padding) + ' Z';
+
+  const circles = points.map(function (p) {
+    return '<circle class="growth-chart__point" cx="' + p.x + '" cy="' + p.y + '" r="3.5"><title>' + p.snapshot.date + ': ' + formatCurrency(p.snapshot.totalCorpus) + '</title></circle>';
+  }).join('');
+
+  const labels = points.map(function (p, i) {
+    // Only label every other point on small charts to avoid crowding.
+    if (snapshots.length > 6 && i % 2 !== 0) return '';
+    return '<text class="growth-chart__label" x="' + p.x + '" y="' + (height - 8) + '" text-anchor="middle">' + p.snapshot.date.slice(2) + '</text>';
+  }).join('');
+
+  wrap.innerHTML =
+    '<svg class="growth-chart" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="xMidYMid meet">' +
+      '<path class="growth-chart__area" d="' + areaPath + '"></path>' +
+      '<path class="growth-chart__line" d="' + linePath + '"></path>' +
+      circles + labels +
+    '</svg>';
+}
+
+function lookupCorpusOnDate() {
+  const date = document.getElementById('lookupDate').value;
+  const resultEl = document.getElementById('lookupResult');
+
+  if (!date) {
+    resultEl.textContent = 'Please choose a date first.';
+    return;
+  }
+
+  const snapshots = loadData(STORAGE_KEYS.snapshots, []);
+  const match = snapshots.find(function (s) { return s.date === date; });
+
+  resultEl.innerHTML = match
+    ? 'Total corpus on <strong>' + date + '</strong>: <strong>' + formatCurrency(match.totalCorpus) + '</strong>'
+    : 'No snapshot recorded for ' + date + '. Take a snapshot on that date to see it here.';
+}
+
+function renderCorpusHistory() {
+  renderSnapshotList();
+  renderGrowthChart();
+}
+
+function initCorpusHistoryScreen() {
+  renderQuickDateButtons();
+
+  const takeBtn = document.getElementById('btnTakeSnapshot');
+  if (takeBtn) takeBtn.addEventListener('click', takeSnapshot);
+
+  const lookupBtn = document.getElementById('btnLookupDate');
+  if (lookupBtn) lookupBtn.addEventListener('click', lookupCorpusOnDate);
+}
+
+/* ---------- 18. FIRST-TIME TRUST NOTICE ----------
+   Shows exactly once, ever, on this device — never repeats on
+   later visits, even after "Clear All Data" (that only clears
+   financial data, not this preference). The same message stays
+   available permanently, quietly, on the Settings screen. */
+
+function initTrustNotice() {
+  const modal = document.getElementById('trustNoticeModal');
+  const dismissBtn = document.getElementById('btnDismissTrustNotice');
+  if (!modal || !dismissBtn) return;
+
+  const alreadySeen = loadData(STORAGE_KEYS.trustNoticeSeen, false);
+  if (!alreadySeen) {
+    modal.style.display = 'flex';
+  }
+
+  dismissBtn.addEventListener('click', function () {
+    saveData(STORAGE_KEYS.trustNoticeSeen, true);
+    modal.style.display = 'none';
+  });
+}
+
+/* ---------- APP START ---------- */
+document.addEventListener('DOMContentLoaded', function () {
+  initNavigation();
+  initSettingsScreen();
+  initDashboardSort();
+  initAddAssetScreen();
+  initMyAssetsScreen();
+  initAssetDetailModal();
+  initCorpusHistoryScreen();
+  initTrustNotice();
+});
